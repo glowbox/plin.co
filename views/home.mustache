@@ -1,0 +1,13 @@
+{{> header}}
+<script>
+  var puckID = '{{id}}';
+  var runStatsRaw = '{{run}}';
+  var runStats = [];
+  if (runStatsRaw) {
+    var splits = runStatsRaw.split(',')
+    for (var i = 0; i < splits.length; i += 2) {
+      runStats.push([splits[i], splits[i+1]]);
+    }
+  }
+</script>
+{{> footer}}

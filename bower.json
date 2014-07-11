@@ -1,0 +1,21 @@
+{
+  "name": "plin.co",
+  "version": "0.0.1",
+  "homepage": "http://plin.co",
+  "authors": [
+    "Ben Purdy & John Brown"
+  ],
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "public/components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "normalize.css": "~3.0.1"
+  }
+}
