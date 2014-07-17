@@ -6,6 +6,14 @@ var server = http.createServer(app).listen(port);
 var fs = require('fs');
 var markdown = require( "markdown" ).markdown;
 var client;
+// var SerialPort = require("serialport").SerialPort
+// var serialPort = new SerialPort("/dev/tty-usbserial1", {
+//   baudrate: 9600
+// }, false); // this is the openImmediately flag [default is true]
+
+// serialPort.open(function () {
+//   serialPort.on('data', serialReceived);
+// });
 
 if (process.env.REDISCLOUD_URL) {
   var redis = require('redis');
@@ -75,6 +83,14 @@ app.get(/^\/save\/([a-z]{3})$/, function(req, res) {
   return res.send('success!');
 });
 
-
+function serialReceived(data) {
+  if (data === 'A') {
+    console.log('Start');
+  } else if (data === 'A') {
+    console.log('End');
+  } else {
+    console.log(data);
+  }
+}
 
 app.listen(3001);
