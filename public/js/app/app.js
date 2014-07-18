@@ -23,7 +23,8 @@ $(function() {
 
   var board = new Board(SHOW_PEGS);
   //var viz = new Visualization(board, parseInt(puckID.toLowerCase(), 36));
-  var viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
+  //var viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
+  var viz = new VoronoiViz(board, parseInt(puckID.toLowerCase(), 36));
 
   function animate() {
     if (runCurr < runStats.length) {
