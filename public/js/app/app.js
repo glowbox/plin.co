@@ -22,7 +22,8 @@ $(function() {
   }
 
   var board = new Board(SHOW_PEGS);
-  var viz = new Visualization(board, parseInt(puckID.toLowerCase(), 36));
+  //var viz = new Visualization(board, parseInt(puckID.toLowerCase(), 36));
+  var viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
 
   function animate() {
     if (runCurr < runStats.length) {
@@ -31,6 +32,7 @@ $(function() {
         runCurr++;
       }
     }
+    viz.render();
     requestAnimationFrame(animate);
   }
 
@@ -131,5 +133,8 @@ function Visualization(board, puckID) {
       Math.floor((this.puckID * (runCurr + 1) * 25)) % 255 + ',' +
       Math.floor((this.puckID * (runCurr + 1) * 40)) % 255 + ')';
     context.fill();
+  },
+  this.render = function() {
+
   }
 }
