@@ -18,6 +18,7 @@ function VoronoiViz(board, puckID) {
   }
 
   this.hit = function(runCurr, index) {
+    console.log(index);
     var coor = board.getPinCoordinates(index);
 
     var deltaX = (coor.x - this.lastHit.x);

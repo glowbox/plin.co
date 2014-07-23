@@ -4,8 +4,17 @@ var app = express();
 var port = Number(process.env.PORT || 5000);
 var server = http.createServer(app).listen(port);
 var fs = require('fs');
+var sys = require('sys');
+var exec = require('child_process').exec;
 var markdown = require( "markdown" ).markdown;
 var client;
+var bodyParser = require('body-parser');
+
+var images = {};
+
+var CONVERT = '/usr/local/bin/convert';
+
+
 // var SerialPort = require("serialport").SerialPort
 // var serialPort = new SerialPort("/dev/tty-usbserial1", {
 //   baudrate: 9600
@@ -23,6 +32,9 @@ if (process.env.REDISCLOUD_URL) {
   client.auth(redisURL.auth.split(":")[1]);
 }
 
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded());
+
 app.set('views', __dirname + '/views');
 
 app.set('view engine', 'html');
@@ -36,7 +48,35 @@ app.get('/', function(req, res){
   return res.render('home.mustache');
 });
 
-app.get(/^\/([a-z]{3})$/, function(req, res){
+
+
+
+
+
+
+
+app.post('/upload/', function(req, res) {
+  fs.mkdir('tmp/' + req.body.id + '/');
+  if (req.body.type === 'done') {
+    exec(CONVERT + ' -delay 10 -loop 0 -background black -dispose previous ' + __dirname + '/tmp/' + req.body.id + '/*.png ' + __dirname + '/tmp/' + req.body.id + '.gif');
+    
+    fs.readdir(__dirname + '/tmp/' + req.body.id, function(fileName) {
+        fs.unlinkSync(__dirname + '/tmp/' + req.body.id + '/' + fileName);
+        console.log(fileName);
+    });
+
+    fs.rmdir(__dirname + '/tmp/' + req.body.id);
+
+  } else {
+    var data = req.body.png.replace(/^data:image\/\w+;base64,/, "");
+    var buf = new Buffer(data, 'base64');
+    var s = "000" + req.body.num;
+    fs.writeFile('tmp/' + req.body.id + '/' + s.substr(s.length-3) + '.png', buf);
+  }
+  return res.send('success!');
+});
+
+app.get(/^\/([a-z]{3})$/, function(req, res) {
   var id = req.params[0];
   client.get(id, function (e, r) {
     if (r) {
@@ -81,6 +121,12 @@ app.get(/^\/save\/([a-z]{3})$/, function(req, res) {
   }
 
   return res.send('success!');
+});
+
+app.get(/^\/([a-z]{3}).gif$/, function(req, res) {
+  var img = fs.readFileSync('tmp/' + req.params[0] + '/result.gif');
+  res.writeHead(200, {'Content-Type': 'image/gif' });
+  res.end(img, 'binary');
 });
 
 function serialReceived(data) {

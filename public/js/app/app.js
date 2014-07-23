@@ -1,16 +1,53 @@
 var two;
 var canvas;
 var context;
+var viz;
+var runCurr = 0;
+var startTime;
+var lastImageTime;
+
+var camera;
+var scene;
+var renderer;
+
+var SCREEN_WIDTH = window.innerWidth,
+      SCREEN_HEIGHT = window.innerHeight,
+      SCREEN_WIDTH_HALF = SCREEN_WIDTH  / 2,
+      SCREEN_HEIGHT_HALF = SCREEN_HEIGHT / 2;
+
+var gifs = [];
+var board;
+
 
 $(function() {
 
-  canvas = document.getElementById('canvas');
+  camera = new THREE.PerspectiveCamera( 75, SCREEN_WIDTH / SCREEN_HEIGHT, 1, 10000 );
+  camera.position.z = 450;
+
+  scene = new THREE.Scene();
+
+  
+
+  renderer = new THREE.CanvasRenderer();
+  renderer.setClearColor( 0xffffff );
+  renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
+  document.body.appendChild( renderer.domElement );
+
+  canvas = document.getElementsByTagName('canvas')[0];
+  canvas.setAttribute('id', 'canvas');
   context = canvas.getContext('2d');
 
-  SHOW_PEGS = true;
 
-  var runCurr = 0;
-  var startTime = new Date().getTime() + 1000;
+
+
+
+  // document.addEventListener( 'mousedown', onDocumentMouseDown, false );
+  onWindowResize();
+
+  SHOW_PEGS = true;
+  
+  startTime = new Date().getTime() + 1000;
+  lastImageTime = 0;
 
   if (SHOW_PEGS) {
     two = new Two({
@@ -21,32 +58,57 @@ $(function() {
     Two.Resolution = 10;
   }
 
-  var board = new Board(SHOW_PEGS);
+  board = new Board(SHOW_PEGS);
   //var viz = new Visualization(board, parseInt(puckID.toLowerCase(), 36));
-  //var viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
-  var viz = new VoronoiViz(board, parseInt(puckID.toLowerCase(), 36));
-
+  viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
+  // viz = new VoronoiViz(board, parseInt(puckID.toLowerCase(), 36));
+  // viz = new BirdsViz(board, parseInt(puckID.toLowerCase(), 36));
   function animate() {
+    var now = new Date().getTime();
+    // var diffMain = now - startTime;
+    // if (diffMain > 0 && diffMain < 4000) {
+    //   var diffLast = now - lastImageTime;
+    //   if (diffLast > 100) {
+    //     lastImageTime = now;
+    //     var d = canvas.toDataURL("image/png");
+    //     gifs.push(d);
+    //     // encoder.addFrame(d, true);
+    //     $.post('/upload/', {'id': puckID, 'num': gifs.length, 'png': d, 'type': 'image'});
+    //   }
+    // } else if (diffMain > 4000 && gifs.length) {
+    //   // console.log(gifs);
+    //   $.post('/upload/', {'id': puckID, 'type': 'done'});
+    //   gifs = [];
+    // }
     if (runCurr < runStats.length) {
-      if (startTime + runStats[runCurr][0] * 1000 < new Date().getTime()) {
+      if (startTime + runStats[runCurr][0] * 1000 < now) {
         viz.hit(runCurr, parseInt(runStats[runCurr][1]));
         runCurr++;
       }
     }
     viz.render();
+    renderer.render( scene, camera );
     requestAnimationFrame(animate);
   }
 
   function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+    if (viz.double) {
+      canvas.width *= 2;
+      canvas.height *= 2;
+    }
   }
   
   resizeCanvas();
   animate();
 });
 
-
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize( window.innerWidth, window.innerHeight );
+}
 
 
 
@@ -56,7 +118,7 @@ function Board(showPegs) {
 
   this.numPegs = 78;
   this.pegRadius = 3;
-  this.BOARD_RATIO = 36/46.8;
+  this.BOARD_RATIO = 36/57;
   this.pegHeight = (window.innerHeight - 50);
   this.pegWidth = this.pegHeight * this.BOARD_RATIO;
   if (window.innerWidth < this.pegWidth) {
@@ -64,7 +126,7 @@ function Board(showPegs) {
     this.pegHeight = this.pegWidth / this.BOARD_RATIO;
   }
   this.pegs = [];
-  this.pegSpacing = this.pegWidth / 6;
+  this.pegSpacing = this.pegWidth / 7;
   this.pegOffsetX = (window.innerWidth - this.pegWidth) / 2;
   this.pegOffsetY = (window.innerHeight - this.pegHeight) / 2;
 
@@ -81,16 +143,16 @@ function Board(showPegs) {
       var localPin = i % 13;
       var overallWidth = 13 * this.pegSpacing;
       var x = 0;
-      var y = Math.floor(i / 13) * (this.pegSpacing * .866666667 * 2) + this.pegOffsetY + (this.pegSpacing * .8666);
+      var y = Math.floor(i / 13) * (this.pegSpacing * .866666667 * 2) + this.pegOffsetY + (this.pegSpacing * .8666) * 1.5;
       if (localPin <= 6) {
         var num = i;
         if (i === 65) {
           num = 0;
         }
-        x = (num /13 * overallWidth) % overallWidth + this.pegOffsetX + this.pegSpacing/2;
+        x = (num /13 * overallWidth) % overallWidth + this.pegOffsetX;
         y -= this.pegSpacing * .866666667;
       } else {
-        x = (i /13 * overallWidth) % overallWidth - (overallWidth / 2)  + this.pegOffsetX + this.pegSpacing/2;
+        x = (i /13 * overallWidth) % overallWidth - (overallWidth / 2)  + this.pegOffsetX;
       }
 
       if (showPegs) {
@@ -101,7 +163,8 @@ function Board(showPegs) {
           .css('cursor', 'pointer')
           .click(function(e) {
             var pegNum = $(this).index();
-            pegHit(pegNum);
+            console.log(pegNum);
+            viz.hit(++runCurr, pegNum);
           });
       }
       this.pegs.push({x: x, y: y});
@@ -110,32 +173,9 @@ function Board(showPegs) {
 
   this.getPinCoordinates = function(index) {
     return {
-      x: this.pegs[index].x + this.pegOffsetX,
-      y: this.pegs[index].y + this.pegOffsetY
+      x: this.pegs[index].x,
+      y: this.pegs[index].y
     }
   }
   this.init();
-}
-
-
-
-
-
-
-function Visualization(board, puckID) {
-  this.board = board;
-  this.puckID = puckID;
-  this.hit = function(runCurr, index) {
-    var coor = board.getPinCoordinates(index);
-    context.beginPath();
-    context.arc(coor.x, coor.y, 20, 0, 2 * Math.PI, false);
-    context.fillStyle = 'rgb(' +
-      Math.floor((this.puckID * (runCurr + 1) * 17)) % 255 + ',' +
-      Math.floor((this.puckID * (runCurr + 1) * 25)) % 255 + ',' +
-      Math.floor((this.puckID * (runCurr + 1) * 40)) % 255 + ')';
-    context.fill();
-  },
-  this.render = function() {
-
-  }
 }

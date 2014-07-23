@@ -119,16 +119,50 @@ window.app = app;
   var two;
   var canvas;
   var context;
+  var viz;
+  var runCurr = 0;
+  var startTime;
+  var lastImageTime;
+
+  var camera;
+  var scene;
+  var renderer;
+
+  var SCREEN_WIDTH = window.innerWidth,
+        SCREEN_HEIGHT = window.innerHeight,
+        SCREEN_WIDTH_HALF = SCREEN_WIDTH  / 2,
+        SCREEN_HEIGHT_HALF = SCREEN_HEIGHT / 2;
+
+  var gifs = [];
 
   $(function() {
 
-    canvas = document.getElementById('canvas');
+    camera = new THREE.PerspectiveCamera( 75, SCREEN_WIDTH / SCREEN_HEIGHT, 1, 10000 );
+    camera.position.z = 450;
+
+    scene = new THREE.Scene();
+
+    
+
+    renderer = new THREE.CanvasRenderer();
+    renderer.setClearColor( 0xffffff );
+    renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
+    document.body.appendChild( renderer.domElement );
+
+    canvas = document.getElementsByTagName('canvas')[0];
     context = canvas.getContext('2d');
 
-    SHOW_PEGS = true;
 
-    var runCurr = 0;
-    var startTime = new Date().getTime() + 1000;
+
+
+
+    // document.addEventListener( 'mousedown', onDocumentMouseDown, false );
+    onWindowResize();
+
+    SHOW_PEGS = true;
+    
+    startTime = new Date().getTime() + 1000;
+    lastImageTime = 0;
 
     if (SHOW_PEGS) {
       two = new Two({
@@ -140,28 +174,56 @@ window.app = app;
     }
 
     var board = new Board(SHOW_PEGS);
-    var viz = new Visualization(board, parseInt(puckID.toLowerCase(), 36));
+    //var viz = new Visualization(board, parseInt(puckID.toLowerCase(), 36));
+    viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
+    // viz = new VoronoiViz(board, parseInt(puckID.toLowerCase(), 36));
+    // viz = new BirdsViz(board, parseInt(puckID.toLowerCase(), 36));
 
     function animate() {
+      var now = new Date().getTime();
+      var diffMain = now - startTime;
+      if (diffMain > 0 && diffMain < 4000) {
+        var diffLast = now - lastImageTime;
+        if (diffLast > 100) {
+          lastImageTime = now;
+          var d = canvas.toDataURL("image/png");
+          gifs.push(d);
+          $.post('/upload/', {'id': puckID, 'num': gifs.length, 'png': d, 'type': 'image'});
+        }
+      } else if (diffMain > 4000 && gifs.length) {
+        app.log(gifs);
+        $.post('/upload/', {'id': puckID, 'type': 'done'});
+        gifs = [];
+      }
       if (runCurr < runStats.length) {
-        if (startTime + runStats[runCurr][0] * 1000 < new Date().getTime()) {
+        if (startTime + runStats[runCurr][0] * 1000 < now) {
           viz.hit(runCurr, parseInt(runStats[runCurr][1]));
           runCurr++;
         }
       }
+      viz.render();
+      renderer.render( scene, camera );
       requestAnimationFrame(animate);
     }
 
     function resizeCanvas() {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
+      if (viz.double) {
+        canvas.width *= 2;
+        canvas.height *= 2;
+      }
     }
     
     resizeCanvas();
     animate();
   });
 
-
+  function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize( window.innerWidth, window.innerHeight );
+  }
 
 
 
@@ -216,7 +278,8 @@ window.app = app;
             .css('cursor', 'pointer')
             .click(function(e) {
               var pegNum = $(this).index();
-              pegHit(pegNum);
+              app.log(pegNum);
+              viz.hit(++runCurr, pegNum);
             });
         }
         this.pegs.push({x: x, y: y});
@@ -225,30 +288,10 @@ window.app = app;
 
     this.getPinCoordinates = function(index) {
       return {
-        x: this.pegs[index].x + this.pegOffsetX,
-        y: this.pegs[index].y + this.pegOffsetY
+        x: this.pegs[index].x,
+        y: this.pegs[index].y
       }
     }
     this.init();
-  }
-
-
-
-
-
-
-  function Visualization(board, puckID) {
-    this.board = board;
-    this.puckID = puckID;
-    this.hit = function(runCurr, index) {
-      var coor = board.getPinCoordinates(index);
-      context.beginPath();
-      context.arc(coor.x, coor.y, 20, 0, 2 * Math.PI, false);
-      context.fillStyle = 'rgb(' +
-        Math.floor((this.puckID * (runCurr + 1) * 17)) % 255 + ',' +
-        Math.floor((this.puckID * (runCurr + 1) * 25)) % 255 + ',' +
-        Math.floor((this.puckID * (runCurr + 1) * 40)) % 255 + ')';
-      context.fill();
-    }
   }
 })( window, window.document );
