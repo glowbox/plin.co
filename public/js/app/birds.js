@@ -41,7 +41,7 @@ Bird.prototype = Object.create( THREE.Geometry.prototype );
 var Boid = function() {
 
     var vector = new THREE.Vector3(),
-    _acceleration, _width = 50, _height = 20, _depth = 50, _goal, _neighborhoodRadius = 100,
+    _acceleration, _width = 50, _height = 20, _depth = 50, _goal, _neighborhoodRadius = 10,
     _maxSpeed = 4, _maxSteerForce = 0.1, _avoidWalls = true;
 
     this.position = new THREE.Vector3();
@@ -109,7 +109,7 @@ var Boid = function() {
 
         if ( Math.random() > 0.5 ) {
 
-            //this.flock( boids );
+            this.flock( boids );
 
         }
 
@@ -342,6 +342,8 @@ function BirdsViz(board, puckID) {
 
       birds = [];
       boids = [];
+
+      canvas.className = 'invert';
 
       for ( var i = 0; i < 300; i ++ ) {
 

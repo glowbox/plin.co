@@ -134,8 +134,36 @@ window.app = app;
         SCREEN_HEIGHT_HALF = SCREEN_HEIGHT / 2;
 
   var gifs = [];
+  var board;
+
+  var socket;
+  var hasStarted;
+  var lastPeg;
+
 
   $(function() {
+
+    if (live) {
+      socket = io('http://localhost');
+      socket.on('connect', function(){
+        app.log('connected!');
+        socket.on('peg', function(data){
+          if (lastPeg !== parseInt(data.index, 10)) {
+            lastPeg = parseInt(data.index, 10);
+            if (!hasStarted) {
+              hasStarted = true;
+              startTime = new Date().getTime();
+              app.log('reset start Time');
+            }
+            viz.hit(0, parseInt(data.index, 10));
+          }
+        });
+        socket.on('start', function(data){
+          app.log('NEW ID: ' + data.id);
+        });
+        socket.on('disconnect', function(){});
+      });
+    }
 
     camera = new THREE.PerspectiveCamera( 75, SCREEN_WIDTH / SCREEN_HEIGHT, 1, 10000 );
     camera.position.z = 450;
@@ -150,13 +178,9 @@ window.app = app;
     document.body.appendChild( renderer.domElement );
 
     canvas = document.getElementsByTagName('canvas')[0];
+    canvas.setAttribute('id', 'canvas');
     context = canvas.getContext('2d');
 
-
-
-
-
-    // document.addEventListener( 'mousedown', onDocumentMouseDown, false );
     onWindowResize();
 
     SHOW_PEGS = true;
@@ -173,27 +197,61 @@ window.app = app;
       Two.Resolution = 10;
     }
 
-    var board = new Board(SHOW_PEGS);
-    //var viz = new Visualization(board, parseInt(puckID.toLowerCase(), 36));
-    viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
-    // viz = new VoronoiViz(board, parseInt(puckID.toLowerCase(), 36));
-    // viz = new BirdsViz(board, parseInt(puckID.toLowerCase(), 36));
+    board = new Board(SHOW_PEGS);
+    // if (parseInt(puckID.toLowerCase(), 36) % 3 == 1) {
+    //   viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
+    // } else if (parseInt(puckID.toLowerCase(), 36) % 3 == 2) {
+    //   viz = new VoronoiViz(board, parseInt(puckID.toLowerCase(), 36));
+    // } else {
+    //   viz = new BirdsViz(board, parseInt(puckID.toLowerCase(), 36));
+    // }
+    viz = new BirdsViz(board, parseInt(puckID.toLowerCase(), 36));
 
     function animate() {
       var now = new Date().getTime();
-      var diffMain = now - startTime;
-      if (diffMain > 0 && diffMain < 4000) {
-        var diffLast = now - lastImageTime;
-        if (diffLast > 100) {
-          lastImageTime = now;
-          var d = canvas.toDataURL("image/png");
-          gifs.push(d);
-          $.post('/upload/', {'id': puckID, 'num': gifs.length, 'png': d, 'type': 'image'});
+      if (live && hasStarted) {
+        var diffMain = now - startTime;
+        if (diffMain > 0 && diffMain < viz.gifLength) {
+          var diffLast = now - lastImageTime;
+          if (diffLast > 1000 / viz.framesPerSecond) {
+            lastImageTime = now;
+            var tempCanvas = document.createElement("canvas"),
+                tempCtx = tempCanvas.getContext("2d");
+
+            tempCanvas.width = board.pegWidth * 2;
+            tempCanvas.height = board.pegHeight * 2;
+
+            tempCtx.fillStyle = "black";
+            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+            tempCtx.drawImage(canvas, -board.pegOffsetX + board.pegSpacing / 2, -board.pegOffsetY);
+
+            var imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+            var data = imageData.data;
+
+            for(var i = 0; i < data.length; i += 4) {
+              // red
+              data[i] = 255 - data[i];
+              // green
+              data[i + 1] = 255 - data[i + 1];
+              // blue
+              data[i + 2] = 255 - data[i + 2];
+            }
+
+            // overwrite original image
+            tempCtx.putImageData(imageData, 0, 0);
+
+            var img = tempCanvas.toDataURL("image/png");
+            gifs.push(img);
+
+            $.post('/upload/', {'num': gifs.length, 'png': img, 'type': 'image'});
+            app.log('upload ' + gifs.length);
+          }
+        } else if (diffMain > viz.gifLength && gifs.length) {
+          $.post('/upload/', {'type': 'done', 'fps': viz.framesPerSecond});
+          app.log('done');
+          gifs = [];
         }
-      } else if (diffMain > 4000 && gifs.length) {
-        app.log(gifs);
-        $.post('/upload/', {'id': puckID, 'type': 'done'});
-        gifs = [];
       }
       if (runCurr < runStats.length) {
         if (startTime + runStats[runCurr][0] * 1000 < now) {
@@ -233,7 +291,7 @@ window.app = app;
 
     this.numPegs = 78;
     this.pegRadius = 3;
-    this.BOARD_RATIO = 36/46.8;
+    this.BOARD_RATIO = 36/57;
     this.pegHeight = (window.innerHeight - 50);
     this.pegWidth = this.pegHeight * this.BOARD_RATIO;
     if (window.innerWidth < this.pegWidth) {
@@ -241,8 +299,8 @@ window.app = app;
       this.pegHeight = this.pegWidth / this.BOARD_RATIO;
     }
     this.pegs = [];
-    this.pegSpacing = this.pegWidth / 6;
-    this.pegOffsetX = (window.innerWidth - this.pegWidth) / 2;
+    this.pegSpacing = this.pegWidth / 7;
+    this.pegOffsetX = (window.innerWidth - this.pegWidth) / 2 + this.pegSpacing / 2;
     this.pegOffsetY = (window.innerHeight - this.pegHeight) / 2;
 
     this.init = function() {
@@ -258,16 +316,16 @@ window.app = app;
         var localPin = i % 13;
         var overallWidth = 13 * this.pegSpacing;
         var x = 0;
-        var y = Math.floor(i / 13) * (this.pegSpacing * .866666667 * 2) + this.pegOffsetY + (this.pegSpacing * .8666);
+        var y = Math.floor(i / 13) * (this.pegSpacing * .866666667 * 2) + this.pegOffsetY + (this.pegSpacing * .8666) * 1.5;
         if (localPin <= 6) {
           var num = i;
           if (i === 65) {
             num = 0;
           }
-          x = (num /13 * overallWidth) % overallWidth + this.pegOffsetX + this.pegSpacing/2;
+          x = (num /13 * overallWidth) % overallWidth + this.pegOffsetX;
           y -= this.pegSpacing * .866666667;
         } else {
-          x = (i /13 * overallWidth) % overallWidth - (overallWidth / 2)  + this.pegOffsetX + this.pegSpacing/2;
+          x = (i /13 * overallWidth) % overallWidth - (overallWidth / 2)  + this.pegOffsetX;
         }
 
         if (showPegs) {

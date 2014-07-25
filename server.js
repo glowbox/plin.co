@@ -199,11 +199,11 @@ function serialFakeTest() {
   for (var i = 0; i < tempPegs.length; i++) {
     setTimeout(function() {
       serialReceived(tempPegs[currPeg++]);
-    }, 1500 + i * 100);
+    }, 1500 + i * 200);
   }
   setTimeout(function() {
     serialReceived('B');
-  }, 3000);
+  }, 5000);
 }
 
 function serialReceived(data) {
