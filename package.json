@@ -14,7 +14,8 @@
         "gulp-sass": "^0.7.1",
         "redis": "0.10.3",
         "markdown": "0.5.0",
-        "supervisor": "*",
+        "supervisor": "0.6.0",
+        "twit": "1.1.18",
         "ejs": "*",
         "crypto": "*"
     },
