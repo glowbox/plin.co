@@ -44,7 +44,6 @@ var knoxClient = knox.createClient({
   bucket: process.env.S3_BUCKET
 });
 
-
 // var SerialPort = require("serialport").SerialPort
 // var serialPort = new SerialPort("/dev/tty-usbserial1", {
 //   baudrate: 9600
@@ -89,7 +88,7 @@ app.get('/', function(req, res){
 
 app.get('/live/test/', function(req, res){
   serialFakeTest();
-  return res.render('home.mustache', {'live': true});
+  return res.render('home.mustache', {'live': true, 'id': allIds[nextId]});
 });
 
 
@@ -143,7 +142,7 @@ app.post('/upload/', function(req, res) {
     var tempId = allIds[nextId];
     var gifName = allIds[nextId] + '.gif';
     var path = __dirname + '/tmp/' + tempId;
-    exec(config.CONVERT + ' -delay 10 -loop 0 -background black -resize 480 -dispose previous ' + __dirname + '/tmp/' + allIds[nextId] + '/*.png ' + __dirname + '/tmp/' + gifName, function(error, stdout, stderr) {
+    exec(config.CONVERT + ' -delay ' + req.body.fps + ' -loop 0 -background black -layers Optimize -dispose previous ' + __dirname + '/tmp/' + allIds[nextId] + '/*.png ' + __dirname + '/tmp/' + gifName, function(error, stdout, stderr) {
       knoxClient.putFile(__dirname + '/tmp/' + gifName, gifName, function(err, res){
 
         if (config.POST_TWEET) {

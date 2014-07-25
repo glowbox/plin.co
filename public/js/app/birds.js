@@ -178,7 +178,7 @@ var Boid = function() {
 
         var distance = this.position.distanceTo( target );
 
-        if ( distance < 100 ) {
+        if ( distance < 300 ) {
 
             var steer = new THREE.Vector3();
 
@@ -321,6 +321,9 @@ function BirdsViz(board, puckID) {
   this.puckID = puckID;
   this.double = true;
 
+  this.gifLength = 5000;
+  this.framesPerSecond = 10;
+
   var SCREEN_WIDTH = window.innerWidth,
   SCREEN_HEIGHT = window.innerHeight,
   SCREEN_WIDTH_HALF = SCREEN_WIDTH  / 2,
@@ -355,8 +358,8 @@ function BirdsViz(board, puckID) {
           boid.setAvoidWalls( true );
           boid.setWorldSize( 300, 600, 400 );
 
-          bird = birds[ i ] = new THREE.Mesh( new Bird(), new THREE.MeshBasicMaterial( { color:Math.random() * 0xffffff, side: THREE.DoubleSide } ) );
-          bird.phase = Math.floor( Math.random() * 162.83 );
+          bird = birds[ i ] = new THREE.Mesh( new Bird(), new THREE.MeshBasicMaterial( { color:'#000000', side: THREE.DoubleSide } ) );
+          bird.phase = Math.floor( Math.random() * 62.83 );
           scene.add( bird );
 
 
@@ -387,7 +390,8 @@ function BirdsViz(board, puckID) {
       bird.position.copy( boids[ i ].position );
 
       color = bird.material.color;
-      color.r = color.g = color.b = ( 500 - bird.position.z ) / 1000;
+      bird.material.opacity = 1 - ( 500 - bird.position.z ) / 1000;
+      // color.r = color.g = color.b = ( 500 - bird.position.z ) / 1000;
 
       bird.rotation.y = Math.atan2( - boid.velocity.z, boid.velocity.x );
       bird.rotation.z = Math.asin( boid.velocity.y / boid.velocity.length() );

@@ -80,9 +80,14 @@ $(function() {
   }
 
   board = new Board(SHOW_PEGS);
-  viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
-  // viz = new VoronoiViz(board, parseInt(puckID.toLowerCase(), 36));
-  // viz = new BirdsViz(board, parseInt(puckID.toLowerCase(), 36));
+  // if (parseInt(puckID.toLowerCase(), 36) % 3 == 1) {
+  //   viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
+  // } else if (parseInt(puckID.toLowerCase(), 36) % 3 == 2) {
+  //   viz = new VoronoiViz(board, parseInt(puckID.toLowerCase(), 36));
+  // } else {
+  //   viz = new BirdsViz(board, parseInt(puckID.toLowerCase(), 36));
+  // }
+  viz = new VoronoiViz(board, parseInt(puckID.toLowerCase(), 36));
 
   function animate() {
     var now = new Date().getTime();
@@ -100,7 +105,7 @@ $(function() {
           tempCtx.fillStyle = "black";
           tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
 
-          tempCtx.drawImage(canvas, -board.pegOffsetX, -board.pegOffsetY);
+          tempCtx.drawImage(canvas, -board.pegOffsetX + board.pegSpacing / 2, -board.pegOffsetY);
 
           var img = tempCanvas.toDataURL("image/png");
           gifs.push(img);
@@ -109,7 +114,7 @@ $(function() {
           console.log('upload ' + gifs.length);
         }
       } else if (diffMain > viz.gifLength && gifs.length) {
-        $.post('/upload/', {'type': 'done'});
+        $.post('/upload/', {'type': 'done', 'fps': viz.framesPerSecond});
         console.log('done');
         gifs = [];
       }
@@ -161,7 +166,7 @@ function Board(showPegs) {
   }
   this.pegs = [];
   this.pegSpacing = this.pegWidth / 7;
-  this.pegOffsetX = (window.innerWidth - this.pegWidth) / 2;
+  this.pegOffsetX = (window.innerWidth - this.pegWidth) / 2 + this.pegSpacing / 2;
   this.pegOffsetY = (window.innerHeight - this.pegHeight) / 2;
 
   this.init = function() {
