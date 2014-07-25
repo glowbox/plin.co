@@ -41,8 +41,8 @@ Bird.prototype = Object.create( THREE.Geometry.prototype );
 var Boid = function() {
 
     var vector = new THREE.Vector3(),
-    _acceleration, _width = 50, _height = 20, _depth = 50, _goal, _neighborhoodRadius = 10,
-    _maxSpeed = 4, _maxSteerForce = 0.1, _avoidWalls = false;
+    _acceleration, _width = 50, _height = 20, _depth = 50, _goal, _neighborhoodRadius = 100,
+    _maxSpeed = 4, _maxSteerForce = 0.1, _avoidWalls = true;
 
     this.position = new THREE.Vector3();
     this.velocity = new THREE.Vector3();
@@ -185,7 +185,7 @@ var Boid = function() {
             steer.subVectors( this.position, target );
             steer.multiplyScalar( 150 / distance );
 
-            _acceleration.add( steer );
+            _acceleration.sub( steer );
 
         }
 

@@ -4,6 +4,9 @@ function VoronoiViz(board, puckID) {
   this.board = board;
   this.puckID = puckID;
 
+  this.gifLength = 3000;
+  this.framesPerSecond = 15;
+
   this.lastHit = {x: 0, y: 0};
   this.isFirst = true;
 
@@ -18,7 +21,6 @@ function VoronoiViz(board, puckID) {
   }
 
   this.hit = function(runCurr, index) {
-    console.log(index);
     var coor = board.getPinCoordinates(index);
 
     var deltaX = (coor.x - this.lastHit.x);

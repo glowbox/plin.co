@@ -18,8 +18,34 @@ var SCREEN_WIDTH = window.innerWidth,
 var gifs = [];
 var board;
 
+var socket;
+var hasStarted;
+var lastPeg;
+
 
 $(function() {
+
+  if (live) {
+    socket = io('http://localhost');
+    socket.on('connect', function(){
+      console.log('connected!');
+      socket.on('peg', function(data){
+        if (lastPeg !== parseInt(data.index, 10)) {
+          lastPeg = parseInt(data.index, 10);
+          if (!hasStarted) {
+            hasStarted = true;
+            startTime = new Date().getTime();
+            console.log('reset start Time');
+          }
+          viz.hit(0, parseInt(data.index, 10));
+        }
+      });
+      socket.on('start', function(data){
+        console.log('NEW ID: ' + data.id);
+      });
+      socket.on('disconnect', function(){});
+    });
+  }
 
   camera = new THREE.PerspectiveCamera( 75, SCREEN_WIDTH / SCREEN_HEIGHT, 1, 10000 );
   camera.position.z = 450;
@@ -63,23 +89,41 @@ $(function() {
   viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
   // viz = new VoronoiViz(board, parseInt(puckID.toLowerCase(), 36));
   // viz = new BirdsViz(board, parseInt(puckID.toLowerCase(), 36));
+
   function animate() {
     var now = new Date().getTime();
-    // var diffMain = now - startTime;
-    // if (diffMain > 0 && diffMain < 4000) {
-    //   var diffLast = now - lastImageTime;
-    //   if (diffLast > 100) {
-    //     lastImageTime = now;
-    //     var d = canvas.toDataURL("image/png");
-    //     gifs.push(d);
-    //     // encoder.addFrame(d, true);
-    //     $.post('/upload/', {'id': puckID, 'num': gifs.length, 'png': d, 'type': 'image'});
-    //   }
-    // } else if (diffMain > 4000 && gifs.length) {
-    //   // console.log(gifs);
-    //   $.post('/upload/', {'id': puckID, 'type': 'done'});
-    //   gifs = [];
-    // }
+    if (live && hasStarted) {
+      var diffMain = now - startTime;
+      if (diffMain > 0 && diffMain < viz.gifLength) {
+        var diffLast = now - lastImageTime;
+        if (diffLast > 1000 / viz.framesPerSecond) {
+          lastImageTime = now;
+          var tempCanvas = document.createElement("canvas"),
+              tempCtx = tempCanvas.getContext("2d");
+
+          tempCanvas.width = board.pegWidth;
+          tempCanvas.height = board.pegHeight;
+          tempCtx.fillStyle = "black";
+          tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+          tempCtx.drawImage(canvas, -board.pegOffsetX, -board.pegOffsetY);
+
+          // tempCanvas.width = 400;
+          // tempCanvas.height = 400 / (board.pegWidth / board.pegHeight);
+
+          // write on screen
+          var img = tempCanvas.toDataURL("image/png");
+          gifs.push(img);
+          
+          $.post('/upload/', {'num': gifs.length, 'png': img, 'type': 'image'});
+          console.log('upload ' + gifs.length);
+        }
+      } else if (diffMain > viz.gifLength && gifs.length) {
+        $.post('/upload/', {'type': 'done'});
+        console.log('done');
+        gifs = [];
+      }
+    }
     if (runCurr < runStats.length) {
       if (startTime + runStats[runCurr][0] * 1000 < now) {
         viz.hit(runCurr, parseInt(runStats[runCurr][1]));

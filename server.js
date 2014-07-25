@@ -1,4 +1,6 @@
+var crypto = require('crypto');
 var http = require('http');
+var path = require('path');
 var express = require('express');
 var app = express();
 var port = Number(process.env.PORT || 5000);
@@ -9,10 +11,43 @@ var exec = require('child_process').exec;
 var markdown = require( "markdown" ).markdown;
 var client;
 var bodyParser = require('body-parser');
+var knox = require('knox');
+var request = require('request')
+
+var io = require('socket.io')(server);
+var sockets = [];
+io.on('connection', function(socket){
+  if (DEBUG) console.log('CONNECTED!');
+  sockets.push(socket);
+});
+
+var twitter = require('node-twitter');
+var twitterRestClient;
+if (process.env.TWITTER_CONSUMER_KEY) {
+  twitterRestClient = new twitter.RestClient(
+    process.env.TWITTER_CONSUMER_KEY,
+    process.env.TWITTER_CONSUMER_TOKEN,
+    process.env.TWITTER_ACCESS_TOKEN,
+    process.env.TWITTER_ACCESS_TOKEN_SECRET
+  );
+}
 
 var images = {};
+var allIds = [];
+var nextId;
+var serialData = [];
 
 var CONVERT = '/usr/local/bin/convert';
+var FFMPEG = '/usr/local/bin/ffmpeg';
+var POST_TWEET = false;
+var KEEP_GIFS = true;
+var DEBUG;
+
+var knoxClient = knox.createClient({
+  key: process.env.AWS_ACCESS_KEY_ID,
+  secret: process.env.AWS_SECRET_ACCESS_KEY,
+  bucket: process.env.S3_BUCKET
+});
 
 
 // var SerialPort = require("serialport").SerialPort
@@ -30,8 +65,17 @@ if (process.env.REDISCLOUD_URL) {
   var redisURL = url.parse(process.env.REDISCLOUD_URL);
   client = redis.createClient(redisURL.port, redisURL.hostname, {no_ready_check: true});
   client.auth(redisURL.auth.split(":")[1]);
+
+  client.get('allIds', function (e, r) {
+    if (r) {
+      var data = JSON.parse(r);
+      allIds = data['ids'];
+      nextId = data['ids'].indexOf(data['last']) + 1;
+    }
+  });
 }
 
+app.use(bodyParser({limit: '50mb'}));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded());
 
@@ -48,30 +92,82 @@ app.get('/', function(req, res){
   return res.render('home.mustache');
 });
 
+app.get('/live/test/', function(req, res){
+  serialFakeTest();
+  return res.render('home.mustache', {'live': true});
+});
 
 
 
+function postTweet(tempId, gifName, path) {
+  if (twitterRestClient) {
+    twitterRestClient.statusesUpdateWithMedia(
+      {
+        'status': 'Thanks for playing, @thisisjohnbrown. Check out your run at http://plin.co/' + allIds[nextId] + '!',
+        'media[]': __dirname + '/tmp/' + gifName
+      },
+      function(error, result) {
+        if (error) {
+          if (DEBUG) console.log('Error: ' + (error.code ? error.code + ' ' + error.message : error.message));
+        }
+        if (result) {
+          // console.log(result);
+        }
 
+        removeGifFiles(tempId, gifName, path);
 
+        // fs.unlinkSync(__dirname + '/tmp/' + gifName);
+      }
+    );
+  }
+}
 
+function removeGifFiles(tempId, gifName, path) {
+  if (!KEEP_GIFS) {
+    var files = fs.readdirSync(path);
+    files.forEach(function(file,index){
+        var curPath = path + "/" + file;
+        if(fs.lstatSync(curPath).isDirectory()) { // recurse
+            deleteFolderRecursive(curPath);
+        } else { // delete file
+            fs.unlinkSync(curPath);
+        }
+    });
+    fs.rmdirSync(path);
+    fs.unlinkSync(__dirname + '/tmp/' + tempId + '.gif');
+  }
+}
 
 app.post('/upload/', function(req, res) {
-  fs.mkdir('tmp/' + req.body.id + '/');
+  // fs.exists('tmp/' + allIds[nextId] + '/', function (exists) {
+  //   if (!exists) {
+  //     fs.mkdir('tmp/' + allIds[nextId] + '/');
+  //   }
+  // });
   if (req.body.type === 'done') {
-    exec(CONVERT + ' -delay 10 -loop 0 -background black -dispose previous ' + __dirname + '/tmp/' + req.body.id + '/*.png ' + __dirname + '/tmp/' + req.body.id + '.gif');
-    
-    fs.readdir(__dirname + '/tmp/' + req.body.id, function(fileName) {
-        fs.unlinkSync(__dirname + '/tmp/' + req.body.id + '/' + fileName);
-        console.log(fileName);
-    });
+    var tempId = allIds[nextId];
+    var gifName = allIds[nextId] + '.gif';
+    var path = __dirname + '/tmp/' + tempId;
+    exec(CONVERT + ' -delay 10 -loop 0 -background black -resize 480 -dispose previous ' + __dirname + '/tmp/' + allIds[nextId] + '/*.png ' + __dirname + '/tmp/' + gifName, function(error, stdout, stderr) {
+      knoxClient.putFile(__dirname + '/tmp/' + gifName, gifName, function(err, res){
 
-    fs.rmdir(__dirname + '/tmp/' + req.body.id);
+        if (POST_TWEET) {
+          postTweet(tempId, gifName, path)
+        } else {
+          removeGifFiles(tempId, gifName, path);
+        }
+
+        ++nextId;
+        if (DEBUG) console.log('Ready data for: ' + allIds[nextId]);
+      });
+    });
 
   } else {
     var data = req.body.png.replace(/^data:image\/\w+;base64,/, "");
     var buf = new Buffer(data, 'base64');
     var s = "000" + req.body.num;
-    fs.writeFile('tmp/' + req.body.id + '/' + s.substr(s.length-3) + '.png', buf);
+    if (DEBUG) console.log('Saving file: ' + s.substr(s.length-3));
+    fs.writeFile('tmp/' + allIds[nextId] + '/' + s.substr(s.length-3) + '.png', buf);
   }
   return res.send('success!');
 });
@@ -81,7 +177,6 @@ app.get(/^\/([a-z]{3})$/, function(req, res) {
   client.get(id, function (e, r) {
     if (r) {
       var data = JSON.parse(r);
-      console.log(data.runs[0]);
       return res.render('home.mustache', {id: id, run: data.runs[0]});
     } else {
       return res.render('404.mustache');
@@ -90,53 +185,65 @@ app.get(/^\/([a-z]{3})$/, function(req, res) {
   // return res.render('home.mustache', {id: req.params[0]});
 });
 
-
-
-app.get(/^\/save\/([a-z]{3})$/, function(req, res) {
-  if (client) {
-    var id = req.params[0];
-    if (id) {
-      client.get(id, function (e, r) {
-        if (!r) {
-          var data = {
-            runs: [
-              [[0, 0], [.3, 1], [.6, 2], [1, 7], [1.3, 8], [1.6, 14]]
-            ]
-          }
-          client.set(id, JSON.stringify(data), redis.print);
-        } else {
-          console.log(r);
-          var data = JSON.parse(r);
-          console.log(data);
-          data.runs.push([[0, 0], [.3, 1], [.6, 2], [1, 7], [1.3, 8], [1.6, 14]]);
-          client.set(id, JSON.stringify(data), redis.print);
-        }
-        // var order = JSON.parse(r).order;
-        // for (var j = 0; j < order.length; j++) {
-        //   scenes.push(order[j].json);
-        //   gfys.push(order[j].gfy);
-        // }
-      });
-    }
-  }
-
-  return res.send('success!');
-});
-
 app.get(/^\/([a-z]{3}).gif$/, function(req, res) {
-  var img = fs.readFileSync('tmp/' + req.params[0] + '/result.gif');
-  res.writeHead(200, {'Content-Type': 'image/gif' });
-  res.end(img, 'binary');
+
+  http.get('http://plin-co.s3.amazonaws.com/' + req.params[0] + '.gif', function(proxyRes) {
+    if (proxyRes.statusCode === 200) {
+      proxyRes.pipe(res);
+    } else {
+      return res.render('404.mustache');
+    }
+  });
 });
+
+function serialFakeTest() {
+  setTimeout(function() {
+    serialReceived('A');
+  }, 1000);
+  var tempPegs = [2, 3, 9, 16, 17, 23, 29, 28, 35, 36, 42, 48, 55, 54, 61];
+  var currPeg = 0;
+  for (var i = 0; i < tempPegs.length; i++) {
+    setTimeout(function() {
+      serialReceived(tempPegs[currPeg++]);
+    }, 1500 + i * 100);
+  }
+  setTimeout(function() {
+    serialReceived('B');
+  }, 3000);
+}
 
 function serialReceived(data) {
   if (data === 'A') {
-    console.log('Start');
-  } else if (data === 'A') {
-    console.log('End');
+    if (DEBUG) console.log('Starting record for: ' + allIds[nextId]);
+    fs.mkdir('tmp/' + allIds[nextId] + '/');
+    for (var i = 0; i < sockets.length; i++) {
+      sockets[i].broadcast.emit('start', {'id': allIds[nextId]});
+    }
+  } else if (data === 'B') {
+    if (DEBUG) console.log('Setting data for: ' + allIds[nextId]);
+    var startTime = serialData[0][0];
+    for (var i = 0; i < serialData.length; i++) {
+      serialData[i][0] = (serialData[i][0] - startTime) / 1000;
+    }
+    var dataComplete = {
+      runs: [
+        serialData
+      ]
+    }
+    client.set(allIds[nextId], JSON.stringify(dataComplete), redis.print);
+    serialData = [];
+    client.get('allIds', function (e, r) {
+      if (r) {
+        var idData = JSON.parse(r);
+        idData['last'] = allIds[nextId];
+        client.set('allIds', JSON.stringify(idData), redis.print);
+      }
+    });
   } else {
-    console.log(data);
+    if (DEBUG) console.log('Received data for peg: ' + data);
+    for (var i = 0; i < sockets.length; i++) {
+      sockets[i].broadcast.emit('peg', {'index': data});
+    }
+    serialData.push([new Date().getTime(), data]);
   }
 }
-
-app.listen(3001);

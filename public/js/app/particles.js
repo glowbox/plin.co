@@ -4,7 +4,10 @@ function ParticleEsplode(board, puckID) {
   this.board = board;
   this.puckID = puckID;
 
-  this.particleCount = 1000;
+  this.gifLength = 10000;
+  this.framesPerSecond = 5;
+
+  this.particleCount = 3000;
   this.particles = [];
   for(var i = 0; i < this.particleCount; i++){
     this.particles.push( {x:0, y:0, vx:0, vy:0, alive:false});
@@ -41,6 +44,9 @@ function ParticleEsplode(board, puckID) {
                 pin = pins[ i ];
                 // move body to correct position
                 pin.body.state.pos.clone( pin.target );
+                // pin.body.state.angular.acc.pos = 0;
+                // pin.body.state.angular.acc.acc = 0;
+                // pin.body.state.angular.acc.vel = 0;
             }
         }
     };
@@ -56,36 +62,38 @@ Physics(function (world) {
     world.add(renderer);
 
     var pinConstraints = Physics.behavior('pin-constraints');
-
+    self.baffle = [];
     for (var i = 0; i < board.numPegs; i++) {
       var coors = board.getPinCoordinates(i);
       var ball = Physics.body('circle', {
           x: coors.x,
           y: coors.y,
           radius: 5,
-          // hidden: true,
-          restitution: 0.9
+          hidden: true,
+          restitution: 0.9,
       });
       world.add(ball);
       pinConstraints.add(ball, ball.state.pos);
 
       if (i < 7) {
-        console.log(100 * i);
         var baffle = Physics.body('rectangle', {
             x: coors.x,
             y: window.innerHeight - 50,
             width: 15,
             height: 100,
-            mass: 1,
+            mass: 10000000000,
             styles: {
                 fillStyle: '#999999',
                 angleIndicator: 'none'
             },
-            restitution: 1
+            fixed: true,
+            cof: 0,
+            restitution: .8
 
             // restitution: 0.9
         });
         world.add(baffle);
+        self.baffle.push(baffle);
         // pinConstraints.add(baffle, baffle.state.pos);
       }
     }
@@ -131,7 +139,7 @@ Physics(function (world) {
 
   this.addParticles = function(x, y, runCurr) {
     var found = 0;
-    for(var i = 0; i < 3; i++){
+    for(var i = 0; i < 1; i++){
       if(!this.particles[i].alive) {
         var speed = (this.color.r * 17.93) % 1 * 6;
         var angle = (this.color.g * 16.13) % 1 * Math.PI * 2;
@@ -142,12 +150,13 @@ Physics(function (world) {
             y: y - 20,
             vy: -(this.color.b * 14.65) % 1 * .1,
             vx: -.5 + (this.color.r * 12.39) % 1,
-            radius: 10 + (this.color.g * 16.43) % 1 * 10,
-            mass: .0001,
+            radius: (board.pegSpacing / 7) + (this.color.g * 16.43) % 1 * (board.pegSpacing / 7),
+            mass: .0000000001,
             styles: {
                 fillStyle: 'rgb(' + this.color.r + ',' + this.color.g + ' ,' + this.color.b + ' )',
                 angleIndicator: 'none'
-            }
+            },
+            restitution: .0
 
             // restitution: 0.9
         });

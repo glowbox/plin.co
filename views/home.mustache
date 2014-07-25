@@ -2,13 +2,15 @@
 <script>
   var puckID = '{{id}}';
   var runStatsRaw = '{{run}}';
+  var live = '{{live}}';
+  var test = '{{test}}';
   var runStats = [];
   if (runStatsRaw) {
     var splits = runStatsRaw.split(',')
     for (var i = 0; i < splits.length; i += 2) {
       runStats.push([splits[i], splits[i+1]]);
     }
-  } else {
+  } else if (test) {
     var tempPegs = [2, 3, 9, 16, 17, 23, 29, 28, 35, 36, 42, 48, 55, 54, 61];
     for (var i = 0; i < tempPegs.length; i++) {
       runStats.push([i * .1, tempPegs[i]]);
