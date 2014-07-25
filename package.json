@@ -18,7 +18,8 @@
         "twit": "1.1.18",
         "ejs": "*",
         "crypto": "*",
-        "body-parser": "1.4.3"
+        "body-parser": "1.4.3",
+        "knox": "0.9.0"
     },
     "engines": {
       "node": "0.10.x"
