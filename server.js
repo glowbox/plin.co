@@ -1,3 +1,4 @@
+var config = require('./config');
 var crypto = require('crypto');
 var http = require('http');
 var path = require('path');
@@ -17,7 +18,7 @@ var request = require('request')
 var io = require('socket.io')(server);
 var sockets = [];
 io.on('connection', function(socket){
-  if (DEBUG) console.log('CONNECTED!');
+  if (config.DEBUG) console.log('CONNECTED!');
   sockets.push(socket);
 });
 
@@ -36,12 +37,6 @@ var images = {};
 var allIds = [];
 var nextId;
 var serialData = [];
-
-var CONVERT = '/usr/local/bin/convert';
-var FFMPEG = '/usr/local/bin/ffmpeg';
-var POST_TWEET = false;
-var KEEP_GIFS = true;
-var DEBUG;
 
 var knoxClient = knox.createClient({
   key: process.env.AWS_ACCESS_KEY_ID,
@@ -108,7 +103,7 @@ function postTweet(tempId, gifName, path) {
       },
       function(error, result) {
         if (error) {
-          if (DEBUG) console.log('Error: ' + (error.code ? error.code + ' ' + error.message : error.message));
+          if (config.DEBUG) console.log('Error: ' + (error.code ? error.code + ' ' + error.message : error.message));
         }
         if (result) {
           // console.log(result);
@@ -123,7 +118,7 @@ function postTweet(tempId, gifName, path) {
 }
 
 function removeGifFiles(tempId, gifName, path) {
-  if (!KEEP_GIFS) {
+  if (!config.KEEP_GIFS) {
     var files = fs.readdirSync(path);
     files.forEach(function(file,index){
         var curPath = path + "/" + file;
@@ -148,17 +143,17 @@ app.post('/upload/', function(req, res) {
     var tempId = allIds[nextId];
     var gifName = allIds[nextId] + '.gif';
     var path = __dirname + '/tmp/' + tempId;
-    exec(CONVERT + ' -delay 10 -loop 0 -background black -resize 480 -dispose previous ' + __dirname + '/tmp/' + allIds[nextId] + '/*.png ' + __dirname + '/tmp/' + gifName, function(error, stdout, stderr) {
+    exec(config.CONVERT + ' -delay 10 -loop 0 -background black -resize 480 -dispose previous ' + __dirname + '/tmp/' + allIds[nextId] + '/*.png ' + __dirname + '/tmp/' + gifName, function(error, stdout, stderr) {
       knoxClient.putFile(__dirname + '/tmp/' + gifName, gifName, function(err, res){
 
-        if (POST_TWEET) {
+        if (config.POST_TWEET) {
           postTweet(tempId, gifName, path)
         } else {
           removeGifFiles(tempId, gifName, path);
         }
 
         ++nextId;
-        if (DEBUG) console.log('Ready data for: ' + allIds[nextId]);
+        if (config.DEBUG) console.log('Ready data for: ' + allIds[nextId]);
       });
     });
 
@@ -166,7 +161,7 @@ app.post('/upload/', function(req, res) {
     var data = req.body.png.replace(/^data:image\/\w+;base64,/, "");
     var buf = new Buffer(data, 'base64');
     var s = "000" + req.body.num;
-    if (DEBUG) console.log('Saving file: ' + s.substr(s.length-3));
+    if (config.DEBUG) console.log('Saving file: ' + s.substr(s.length-3));
     fs.writeFile('tmp/' + allIds[nextId] + '/' + s.substr(s.length-3) + '.png', buf);
   }
   return res.send('success!');
@@ -214,13 +209,13 @@ function serialFakeTest() {
 
 function serialReceived(data) {
   if (data === 'A') {
-    if (DEBUG) console.log('Starting record for: ' + allIds[nextId]);
+    if (config.DEBUG) console.log('Starting record for: ' + allIds[nextId]);
     fs.mkdir('tmp/' + allIds[nextId] + '/');
     for (var i = 0; i < sockets.length; i++) {
       sockets[i].broadcast.emit('start', {'id': allIds[nextId]});
     }
   } else if (data === 'B') {
-    if (DEBUG) console.log('Setting data for: ' + allIds[nextId]);
+    if (config.DEBUG) console.log('Setting data for: ' + allIds[nextId]);
     var startTime = serialData[0][0];
     for (var i = 0; i < serialData.length; i++) {
       serialData[i][0] = (serialData[i][0] - startTime) / 1000;
@@ -240,7 +235,7 @@ function serialReceived(data) {
       }
     });
   } else {
-    if (DEBUG) console.log('Received data for peg: ' + data);
+    if (config.DEBUG) console.log('Received data for peg: ' + data);
     for (var i = 0; i < sockets.length; i++) {
       sockets[i].broadcast.emit('peg', {'index': data});
     }
