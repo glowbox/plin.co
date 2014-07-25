@@ -4,8 +4,8 @@ function ParticleEsplode(board, puckID) {
   this.board = board;
   this.puckID = puckID;
 
-  this.gifLength = 10000;
-  this.framesPerSecond = 5;
+  this.gifLength = 6000;
+  this.framesPerSecond = 20;
 
   this.particleCount = 3000;
   this.particles = [];
@@ -19,6 +19,7 @@ function ParticleEsplode(board, puckID) {
   }
 
   this.world;
+  this.hideGeometry = true;
 
   Physics.behavior('pin-constraints', function( parent ){
     return {
@@ -68,8 +69,8 @@ Physics(function (world) {
       var ball = Physics.body('circle', {
           x: coors.x,
           y: coors.y,
-          radius: 5,
-          hidden: true,
+          radius: board.pegSpacing / 20,
+          hidden: self.hideGeometry,
           restitution: 0.9,
       });
       world.add(ball);
@@ -78,14 +79,15 @@ Physics(function (world) {
       if (i < 7) {
         var baffle = Physics.body('rectangle', {
             x: coors.x,
-            y: window.innerHeight - 50,
-            width: 15,
-            height: 100,
+            y: window.innerHeight - board.pegSpacing / 2,
+            width: board.pegSpacing / 6,
+            height: board.pegSpacing,
             mass: 10000000000,
             styles: {
                 fillStyle: '#999999',
                 angleIndicator: 'none'
             },
+            hidden: self.hideGeometry,
             fixed: true,
             cof: 0,
             restitution: .8
@@ -94,7 +96,36 @@ Physics(function (world) {
         });
         world.add(baffle);
         self.baffle.push(baffle);
-        // pinConstraints.add(baffle, baffle.state.pos);
+        pinConstraints.add(baffle, baffle.state.pos);
+      }
+
+      if (i % 13 === 7) {
+        for (var j = 0; j < 2; j++) {
+          var xLoc = coors.x + board.pegSpacing * 6.25;
+          var bumpAngle = Math.PI;
+          if (j ==1) {
+            xLoc = coors.x - board.pegSpacing - ((board.pegSpacing / 2) / 2);
+            bumpAngle = 0;
+          }
+          var bumper = Physics.body('convex-polygon', {
+            vertices: [
+              {x: 0, y: 0},
+              {x: (board.pegSpacing / 2), y: (board.pegSpacing) * .866666},
+              {x: 0, y: board.pegSpacing * 2 * .866666}
+            ],
+            x: xLoc,
+            y: coors.y,
+            angle: bumpAngle,
+            restitution: 0.9,
+            hidden: self.hideGeometry,
+            styles: {
+                fillStyle: '#859900',
+                angleIndicator: 'none'
+            }
+          });
+          world.add(bumper);
+          pinConstraints.add(bumper, bumper.state.pos);
+        }
       }
     }
 
@@ -109,7 +140,7 @@ Physics(function (world) {
     world.add(Physics.behavior('body-impulse-response'));
     world.add(Physics.behavior('sweep-prune'));
 
-    var bounds = Physics.aabb(board.pegOffsetX - board.pegSpacing/2, 0, board.pegOffsetX + board.pegWidth, window.innerHeight);
+    var bounds = Physics.aabb(board.pegOffsetX - board.pegSpacing, 0, board.pegOffsetX + board.pegWidth + board.pegSpacing / 2, window.innerHeight);
 
     world.add(Physics.behavior('edge-collision-detection', {
         aabb: bounds,
@@ -149,8 +180,8 @@ Physics(function (world) {
             x: x - 5,
             y: y - 20,
             vy: -(this.color.b * 14.65) % 1 * .1,
-            vx: -.5 + (this.color.r * 12.39) % 1,
-            radius: (board.pegSpacing / 7) + (this.color.g * 16.43) % 1 * (board.pegSpacing / 7),
+            vx: -.1 + (this.color.r * 12.39) % .2,
+            radius: (board.pegSpacing / 10) + (this.color.g * 16.43) % 1 * (board.pegSpacing / 10),
             mass: .0000000001,
             styles: {
                 fillStyle: 'rgb(' + this.color.r + ',' + this.color.g + ' ,' + this.color.b + ' )',

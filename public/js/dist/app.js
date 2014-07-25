@@ -183,7 +183,7 @@ window.app = app;
 
     onWindowResize();
 
-    SHOW_PEGS = true;
+    SHOW_PEGS = false;
     
     startTime = new Date().getTime() + 1000;
     lastImageTime = 0;
@@ -201,11 +201,11 @@ window.app = app;
     // if (parseInt(puckID.toLowerCase(), 36) % 3 == 1) {
     //   viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
     // } else if (parseInt(puckID.toLowerCase(), 36) % 3 == 2) {
-    //   viz = new VoronoiViz(board, parseInt(puckID.toLowerCase(), 36));
+      // viz = new VoronoiViz(board, parseInt(puckID.toLowerCase(), 36));
     // } else {
-    //   viz = new BirdsViz(board, parseInt(puckID.toLowerCase(), 36));
+      // viz = new BirdsViz(board, parseInt(puckID.toLowerCase(), 36));
     // }
-    viz = new BirdsViz(board, parseInt(puckID.toLowerCase(), 36));
+    viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
 
     function animate() {
       var now = new Date().getTime();
@@ -218,28 +218,30 @@ window.app = app;
             var tempCanvas = document.createElement("canvas"),
                 tempCtx = tempCanvas.getContext("2d");
 
-            tempCanvas.width = board.pegWidth * 2;
-            tempCanvas.height = board.pegHeight * 2;
+            tempCanvas.width = (board.pegWidth + board.pegSpacing) * 1;
+            tempCanvas.height = (board.pegHeight + board.pegSpacing * .8666666) * 1;
 
             tempCtx.fillStyle = "black";
             tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
 
-            tempCtx.drawImage(canvas, -board.pegOffsetX + board.pegSpacing / 2, -board.pegOffsetY);
+            tempCtx.drawImage(canvas, -board.pegOffsetX + board.pegSpacing, -board.pegOffsetY);
 
-            var imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-            var data = imageData.data;
+            if (viz.double) {
+              var imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+              var data = imageData.data;
 
-            for(var i = 0; i < data.length; i += 4) {
-              // red
-              data[i] = 255 - data[i];
-              // green
-              data[i + 1] = 255 - data[i + 1];
-              // blue
-              data[i + 2] = 255 - data[i + 2];
+              for(var i = 0; i < data.length; i += 4) {
+                // red
+                data[i] = 255 - data[i];
+                // green
+                data[i + 1] = 255 - data[i + 1];
+                // blue
+                data[i + 2] = 255 - data[i + 2];
+              }
+
+              // overwrite original image
+              tempCtx.putImageData(imageData, 0, 0);
             }
-
-            // overwrite original image
-            tempCtx.putImageData(imageData, 0, 0);
 
             var img = tempCanvas.toDataURL("image/png");
             gifs.push(img);
@@ -267,9 +269,11 @@ window.app = app;
     function resizeCanvas() {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
+      app.log('a');
       if (viz.double) {
-        canvas.width *= 2;
-        canvas.height *= 2;
+        app.log('a');
+        // canvas.width *= 4;
+        // canvas.height *= 4;
       }
     }
     

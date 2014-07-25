@@ -1,7 +1,7 @@
 var config = {}
 
 config.CONVERT = '/usr/local/bin/convert';
-config.POST_TWEET = true;
+config.POST_TWEET = false;
 config.KEEP_GIFS = true;
 config.DEBUG = true;
 
