@@ -17,7 +17,8 @@
         "supervisor": "0.6.0",
         "twit": "1.1.18",
         "ejs": "*",
-        "crypto": "*"
+        "crypto": "*",
+        "body-parser": "1.4.3"
     },
     "engines": {
       "node": "0.10.x"
