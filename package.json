@@ -19,7 +19,8 @@
         "ejs": "*",
         "crypto": "*",
         "body-parser": "1.4.3",
-        "knox": "0.9.0"
+        "knox": "0.9.0",
+        "request": "2.26.0"
     },
     "engines": {
       "node": "0.10.x"
