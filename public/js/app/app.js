@@ -63,11 +63,6 @@ $(function() {
   canvas.setAttribute('id', 'canvas');
   context = canvas.getContext('2d');
 
-
-
-
-
-  // document.addEventListener( 'mousedown', onDocumentMouseDown, false );
   onWindowResize();
 
   SHOW_PEGS = true;
@@ -85,7 +80,6 @@ $(function() {
   }
 
   board = new Board(SHOW_PEGS);
-  //var viz = new Visualization(board, parseInt(puckID.toLowerCase(), 36));
   viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
   // viz = new VoronoiViz(board, parseInt(puckID.toLowerCase(), 36));
   // viz = new BirdsViz(board, parseInt(puckID.toLowerCase(), 36));
@@ -108,13 +102,9 @@ $(function() {
 
           tempCtx.drawImage(canvas, -board.pegOffsetX, -board.pegOffsetY);
 
-          // tempCanvas.width = 400;
-          // tempCanvas.height = 400 / (board.pegWidth / board.pegHeight);
-
-          // write on screen
           var img = tempCanvas.toDataURL("image/png");
           gifs.push(img);
-          
+
           $.post('/upload/', {'num': gifs.length, 'png': img, 'type': 'image'});
           console.log('upload ' + gifs.length);
         }
