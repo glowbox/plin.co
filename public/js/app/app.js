@@ -14,6 +14,7 @@ var SCREEN_WIDTH = window.innerWidth,
       SCREEN_HEIGHT = window.innerHeight,
       SCREEN_WIDTH_HALF = SCREEN_WIDTH  / 2,
       SCREEN_HEIGHT_HALF = SCREEN_HEIGHT / 2;
+var DEBUG = false;
 
 var gifs = [];
 var board;
@@ -22,26 +23,30 @@ var socket;
 var hasStarted;
 var lastPeg;
 
+var worker;
+var contexts = [];
+var gifSize = {};
+
 
 $(function() {
 
   if (live) {
     socket = io('http://localhost');
     socket.on('connect', function(){
-      console.log('connected!');
+      if (DEBUG) console.log('connected!');
       socket.on('peg', function(data){
         if (lastPeg !== parseInt(data.index, 10)) {
           lastPeg = parseInt(data.index, 10);
           if (!hasStarted) {
             hasStarted = true;
             startTime = new Date().getTime();
-            console.log('reset start Time');
+            if (DEBUG) console.log('reset start Time');
           }
           viz.hit(0, parseInt(data.index, 10));
         }
       });
       socket.on('start', function(data){
-        console.log('NEW ID: ' + data.id);
+        if (DEBUG) console.log('NEW ID: ' + data.id);
       });
       socket.on('disconnect', function(){});
     });
@@ -89,6 +94,11 @@ $(function() {
   // }
   viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
 
+  worker = new Worker( '/js/app/worker.js' );
+  worker.onmessage = function( event ){
+    console.log( event.data );
+  };
+
   function animate() {
     var now = new Date().getTime();
     if (live && hasStarted) {
@@ -100,14 +110,25 @@ $(function() {
           var tempCanvas = document.createElement("canvas"),
               tempCtx = tempCanvas.getContext("2d");
 
-          tempCanvas.width = (board.pegWidth + board.pegSpacing) * 1;
-          tempCanvas.height = (board.pegHeight + board.pegSpacing * .8666666) * 1;
+          var dOffset = ((viz.double && window.devicePixelRatio) > 1 ? 2 : 1);
+          var maxWidth = (board.pegWidth) * dOffset;
+          var maxHeight = (board.pegHeight) * dOffset;
+          var ratio = maxWidth / maxHeight;
+          tempCanvas.width = 480;
+          tempCanvas.height = Math.floor(480 / ratio);
+          var sizeRatio = maxWidth / tempCanvas.width;
+
+          gifSize = {
+            'width': tempCanvas.width,
+            'height': tempCanvas.height
+          }
 
           tempCtx.fillStyle = "black";
           tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-
-          tempCtx.drawImage(canvas, -board.pegOffsetX + board.pegSpacing, -board.pegOffsetY);
-
+          tempCtx.drawImage(canvas, (canvas.width - maxWidth) / 2, (canvas.height - maxHeight) / 2, maxWidth, maxHeight, 0, 0, 480, Math.floor(480 / ratio));
+          // tempCanvas.width = 480;
+          // tempCanvas.height = Math.floor(480 * ratio);
+          contexts.push(tempCanvas);
           if (viz.double) {
             var imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
             var data = imageData.data;
@@ -120,20 +141,13 @@ $(function() {
               // blue
               data[i + 2] = 255 - data[i + 2];
             }
-
-            // overwrite original image
             tempCtx.putImageData(imageData, 0, 0);
           }
-
-          var img = tempCanvas.toDataURL("image/png");
-          gifs.push(img);
-
-          $.post('/upload/', {'num': gifs.length, 'png': img, 'type': 'image'});
-          console.log('upload ' + gifs.length);
+          gifs.push(0);
         }
       } else if (diffMain > viz.gifLength && gifs.length) {
-        $.post('/upload/', {'type': 'done', 'fps': viz.framesPerSecond});
-        console.log('done');
+        uploadImages();
+        if (DEBUG) console.log('done');
         gifs = [];
       }
     }
@@ -151,11 +165,9 @@ $(function() {
   function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-    console.log('a');
     if (viz.double) {
-      console.log('a');
-      // canvas.width *= 4;
-      // canvas.height *= 4;
+      canvas.width = canvas.width * ((viz.double && window.devicePixelRatio) > 1 ? 2 : 1);
+      canvas.height = canvas.height * ((viz.double && window.devicePixelRatio) > 1 ? 2 : 1);
     }
   }
   
@@ -169,7 +181,17 @@ function onWindowResize() {
   renderer.setSize( window.innerWidth, window.innerHeight );
 }
 
-
+function uploadImages() {
+  // $.post('/upload/', {'type': 'done', 'fps': viz.framesPerSecond});
+  var pngs = [];
+  for (var i = 0; i < contexts.length; i++) {
+    var img = contexts[i].toDataURL("image/png");
+    pngs.push(img);
+  }
+  // worker.postMessage(passData);
+  $.post('/upload/', {'num': 0, 'pngs': pngs, 'type': 'image', 'fps': viz.framesPerSecond, 'size': gifSize});
+  contexts = [];
+}
 
 
 function Board(showPegs) {
@@ -222,7 +244,7 @@ function Board(showPegs) {
           .css('cursor', 'pointer')
           .click(function(e) {
             var pegNum = $(this).index();
-            console.log(pegNum);
+            if (DEBUG) console.log(pegNum);
             viz.hit(++runCurr, pegNum);
           });
       }

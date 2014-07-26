@@ -4,7 +4,7 @@ function ParticleEsplode(board, puckID) {
   this.board = board;
   this.puckID = puckID;
 
-  this.gifLength = 6000;
+  this.gifLength = 8000;
   this.framesPerSecond = 20;
 
   this.particleCount = 3000;

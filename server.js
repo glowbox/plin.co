@@ -13,7 +13,21 @@ var markdown = require( "markdown" ).markdown;
 var client;
 var bodyParser = require('body-parser');
 var knox = require('knox');
-var request = require('request')
+var request = require('request');
+var PNG = require('png-js');
+var GIFEncoder = require('gifencoder');
+
+process.on('uncaughtException', function (err) {
+  if (err.stack.indexOf('png-js') !== -1) {
+    if (encoderFramesCurr < encoderFrames) {
+      addFrame(encoder, ++encoderFramesCurr, encoderFrames);
+    }
+    console.log(err.stack);
+  } else {
+    console.error(err.stack);
+  }
+  // console.log("Node NOT Exiting...");
+});
 
 var io = require('socket.io')(server);
 var sockets = [];
@@ -65,6 +79,12 @@ if (process.env.REDISCLOUD_URL) {
       var data = JSON.parse(r);
       allIds = data['ids'];
       nextId = data['ids'].indexOf(data['last']) + 1;
+
+      // for (var i = 0; i < allIds.length; i++) {
+      //   if (allIds[i] !== 'allIds') {
+      //     client.del(allIds[i]);
+      //   }
+      // }
     }
   });
 }
@@ -137,6 +157,10 @@ function removeGifFiles(tempId, gifName, path) {
   }
 }
 
+var encoder;
+var encoderFrames;
+var encoderFramesCurr;
+
 app.post('/upload/', function(req, res) {
   // fs.exists('tmp/' + allIds[nextId] + '/', function (exists) {
   //   if (!exists) {
@@ -144,32 +168,71 @@ app.post('/upload/', function(req, res) {
   //   }
   // });
   if (req.body.type === 'done') {
+    
+
+  } else {
     var tempId = allIds[nextId];
     var gifName = allIds[nextId] + '.gif';
     var path = __dirname + '/tmp/' + tempId;
-    exec(config.CONVERT + ' -delay ' + 10 / req.body.fps * 10 + ' -loop 0 -background black -layers Optimize -dispose previous ' + __dirname + '/tmp/' + allIds[nextId] + '/*.png ' + __dirname + '/tmp/' + gifName, function(error, stdout, stderr) {
-      knoxClient.putFile(__dirname + '/tmp/' + gifName, gifName, function(err, res){
 
-        if (config.POST_TWEET) {
-          postTweet(tempId, gifName, path)
-        } else {
-          removeGifFiles(tempId, gifName, path);
-        }
+    for (var i = 0; i < req.body.pngs.length; i++) {
+      var data = req.body.pngs[i].replace(/^data:image\/\w+;base64,/, "");
+      var buf = new Buffer(data, 'base64');
+      var s = "000" + i;
+      if (config.DEBUG) console.log('Saving file: ' + s.substr(s.length-3));
+      fs.writeFile('tmp/' + tempId + '/' + s.substr(s.length-3) + '.png', buf);
+    }
 
-        ++nextId;
-        if (config.DEBUG) console.log('Ready data for: ' + allIds[nextId]);
-      });
-    });
-
-  } else {
-    var data = req.body.png.replace(/^data:image\/\w+;base64,/, "");
-    var buf = new Buffer(data, 'base64');
-    var s = "000" + req.body.num;
-    if (config.DEBUG) console.log('Saving file: ' + s.substr(s.length-3));
-    fs.writeFile('tmp/' + allIds[nextId] + '/' + s.substr(s.length-3) + '.png', buf);
+    encoder = new GIFEncoder(req.body.size.width, req.body.size.height);
+    encoder.createReadStream().pipe(fs.createWriteStream(__dirname + '/tmp/' + gifName));
+    encoder.start();
+    encoder.setRepeat(0);   // 0 for repeat, -1 for no-repeat
+    encoder.setDelay(1000/req.body.fps);  // frame delay in ms
+    encoder.setQuality(10);
+    encoderFrames = req.body.pngs.length - 1;
+    addFrame(encoder, 0, encoderFrames);
   }
   return res.send('success!');
 });
+
+function addFrame(encoder, currGif, max) {
+  var f = "000" + currGif;
+  encoderFramesCurr = currGif;
+  if (config.DEBUG) console.log('ADDING FRAMES: ' + f.substr(f.length-3));
+
+  var tempId = allIds[nextId];
+  var gifName = allIds[nextId] + '.gif';
+  var path = __dirname + '/tmp/' + tempId;
+
+  try {
+    PNG.decode(__dirname + '/tmp/' + tempId + '/' + f.substr(f.length-3) + '.png', function(pixels) {
+      if (currGif++ < max) {
+        encoder.addFrame(pixels);
+        addFrame(encoder, currGif, max);
+      } else {
+        if (config.DEBUG) console.log('ENCODER FINISHED!');
+        encoder.finish();
+
+        knoxClient.putFile(__dirname + '/tmp/' + gifName, gifName, function(err, res){
+          if (config.DEBUG) console.log('FILE PLACED');
+
+          if (config.POST_TWEET) {
+            postTweet(tempId, gifName, path)
+          } else {
+            removeGifFiles(tempId, gifName, path);
+          }
+
+          ++nextId;
+          if (config.DEBUG) console.log('Ready data for: ' + tempId);
+        });
+      }
+    });
+  } catch(e) {
+    console.log(e);
+    currGif++;
+    addFrame(encoder, currGif, max);
+  }
+}
 
 app.get(/^\/([a-z]{3})$/, function(req, res) {
   var id = req.params[0];
@@ -205,17 +268,17 @@ app.get(/^\/([a-z]{3}).gif$/, function(req, res) {
 function serialFakeTest() {
   setTimeout(function() {
     serialReceived('A');
-  }, 6000);
+  }, 1000);
   var tempPegs = [2, 3, 9, 16, 17, 23, 29, 28, 35, 36, 42, 48, 55, 54, 61];
   var currPeg = 0;
   for (var i = 0; i < tempPegs.length; i++) {
     setTimeout(function() {
       serialReceived(tempPegs[currPeg++]);
-    }, 6500 + i * 200);
+    }, 1500 + i * 200);
   }
   setTimeout(function() {
     serialReceived('B');
-  }, 10000);
+  }, 5000);
 }
 
 function serialReceived(data) {

@@ -322,7 +322,7 @@ function BirdsViz(board, puckID) {
   this.double = true;
 
   this.gifLength = 5000;
-  this.framesPerSecond = 5;
+  this.framesPerSecond = 10;
 
   var SCREEN_WIDTH = window.innerWidth,
   SCREEN_HEIGHT = window.innerHeight,
