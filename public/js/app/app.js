@@ -85,14 +85,14 @@ $(function() {
   }
 
   board = new Board(SHOW_PEGS);
-  // if (parseInt(puckID.toLowerCase(), 36) % 3 == 1) {
-  //   viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
-  // } else if (parseInt(puckID.toLowerCase(), 36) % 3 == 2) {
-    // viz = new VoronoiViz(board, parseInt(puckID.toLowerCase(), 36));
-  // } else {
-    // viz = new BirdsViz(board, parseInt(puckID.toLowerCase(), 36));
-  // }
-  viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
+  if (parseInt(puckID.toLowerCase(), 36) % 3 == 1) {
+    viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
+  } else if (parseInt(puckID.toLowerCase(), 36) % 3 == 2) {
+    viz = new VoronoiViz(board, parseInt(puckID.toLowerCase(), 36));
+  } else {
+    viz = new BirdsViz(board, parseInt(puckID.toLowerCase(), 36));
+  }
+  // viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
 
   worker = new Worker( '/js/app/worker.js' );
   worker.onmessage = function( event ){
