@@ -47,6 +47,8 @@ if (process.env.TWITTER_CONSUMER_KEY) {
   );
 }
 
+var queue = [];
+var history = [];
 var images = {};
 var allIds = [];
 var nextId;
@@ -87,6 +89,13 @@ if (process.env.REDISCLOUD_URL) {
       // }
     }
   });
+
+  // client.set('queue', JSON.stringify({'queue': []}), redis.print);
+  client.get('queue', function (e, r) {
+    if (r) {
+      queue = JSON.parse(r).queue;
+    }
+  });
 }
 
 app.use(bodyParser({limit: '50mb'}));
@@ -103,12 +112,16 @@ app.engine('mustache', require('hogan-middleware').__express);
 app.use(express.static(__dirname + '/public'));
 
 app.get('/', function(req, res){
-  return res.render('home.mustache');
+  return res.render('home.mustache', {'js': 'app'});
 });
 
 app.get('/live/test/', function(req, res){
   serialFakeTest();
-  return res.render('home.mustache', {'live': true, 'id': allIds[nextId]});
+  return res.render('home.mustache', {'live': true, 'id': allIds[nextId], 'js': 'app'});
+});
+
+app.get('/live/', function(req, res){
+  return res.render('home.mustache', {'live': true, 'js': 'app'});
 });
 
 function isCallerMobile(req) {
@@ -118,11 +131,26 @@ function isCallerMobile(req) {
   return !!isMobile;
 }
 
+function updateSocketHistory() {
+  for (var i = 0; i < sockets.length; i++) {
+    if (sockets[i].connected) {
+      sockets[i].broadcast.emit('history', {'history': history});
+    }
+  }
+}
+
 function postTweet(tempId, gifName, path) {
   if (twitterRestClient) {
+    history[history.length - 1]['tweeted'] = 'progress';
+    updateSocketHistory();
+    var status = 'Another round played! Check it out at http://plin.co/' + allIds[nextId] + '!';
+    console.log(history[history.length - 1]);
+    if (history[history.length - 1]['twitter'].length) {
+      status = 'Thanks for playing, @thisisjohnbrown. Check out your run at http://plin.co/' + allIds[nextId] + '!';
+    }
     twitterRestClient.statusesUpdateWithMedia(
       {
-        'status': 'Thanks for playing, @thisisjohnbrown. Check out your run at http://plin.co/' + allIds[nextId] + '!',
+        'status': status,
         'media[]': __dirname + '/tmp/' + gifName
       },
       function(error, result) {
@@ -135,7 +163,8 @@ function postTweet(tempId, gifName, path) {
 
         removeGifFiles(tempId, gifName, path);
 
-        // fs.unlinkSync(__dirname + '/tmp/' + gifName);
+        history[history.length - 1]['tweeted'] = true;
+        updateSocketHistory()
       }
     );
   }
@@ -171,6 +200,10 @@ app.post('/upload/', function(req, res) {
     
 
   } else {
+    history[history.length - 1]['complete'] = true;
+    history[history.length - 1]['saved'] = 'progress';
+    updateSocketHistory();
+
     var tempId = allIds[nextId];
     var gifName = allIds[nextId] + '.gif';
     var path = __dirname + '/tmp/' + tempId;
@@ -214,6 +247,9 @@ function addFrame(encoder, currGif, max) {
         encoder.finish();
 
         knoxClient.putFile(__dirname + '/tmp/' + gifName, gifName, function(err, res){
+          history[history.length - 1]['saved'] = true;
+          updateSocketHistory()
+
           if (config.DEBUG) console.log('FILE PLACED');
 
           if (config.POST_TWEET) {
@@ -223,7 +259,12 @@ function addFrame(encoder, currGif, max) {
           }
 
           ++nextId;
-          if (config.DEBUG) console.log('Ready data for: ' + tempId);
+          if (config.DEBUG) console.log('Ready data for: ' + allIds[nextId]);
+          for (var i = 0; i < sockets.length; i++) {
+            if (sockets[i].connected) {
+              sockets[i].broadcast.emit('end', {'id': allIds[nextId]});
+            }
+          }
         });
       }
     });
@@ -242,7 +283,7 @@ app.get(/^\/([a-z]{3})$/, function(req, res) {
       if (isCallerMobile(req)) {
         getGif(req, res);
       } else {
-        return res.render('home.mustache', {id: id, run: data.runs[0]});
+        return res.render('home.mustache', {id: id, run: data.runs[0], 'js': 'app'});
       }
     } else {
       return res.render('404.mustache');
@@ -263,6 +304,69 @@ function getGif(req, res) {
 
 app.get(/^\/([a-z]{3}).gif$/, function(req, res) {
   getGif(req, res);
+});
+
+app.get('/play', function(req, res) {
+  console.log('play!!!!');
+  serialFakeTest();
+  return res.send('success!');
+});
+
+app.get('/admin', function(req, res) {
+  console.log(queue);
+  return res.render('admin.mustache', {'js': 'admin', 'queue': queue, 'history': history});
+});
+
+app.post('/add-user/', function(req, res) {
+  queue.push(req.body.username);
+  var queueJSON = {
+    'queue': queue
+  }
+  client.set('queue', JSON.stringify(queueJSON), redis.print);
+  for (var i = 0; i < sockets.length; i++) {
+    if (sockets[i].connected) {
+      sockets[i].broadcast.emit('queue', queueJSON);
+    }
+  }
+  console.log(queueJSON);
+  return res.send('success!');
+});
+
+app.post('/remove-user/', function(req, res) {
+  var user = queue.splice(queue.indexOf(req.body.username), 1);
+  console.log(user);
+  var queueJSON = {
+    'queue': queue
+  }
+  client.set('queue', JSON.stringify(queueJSON), redis.print);
+  for (var i = 0; i < sockets.length; i++) {
+    if (sockets[i].connected) {
+      sockets[i].broadcast.emit('queue', {'queue': queue});
+    }
+  }
+  updateSocketHistory();
+  return res.send('success!');
+});
+
+app.post('/next-user/', function(req, res) {
+  var user = queue.splice(0, 1);
+  var queueJSON = {
+    'queue': queue
+  }
+  client.set('queue', JSON.stringify(queueJSON), redis.print);
+  history.push({
+    'twitter': user.length ? user[0] : '',
+    'id': allIds[nextId],
+    'complete': 'progress'
+  })
+  for (var i = 0; i < sockets.length; i++) {
+    if (sockets[i].connected) {
+      sockets[i].broadcast.emit('reset', {'id': allIds[nextId]});
+      sockets[i].broadcast.emit('queue', {'queue': queue});
+    }
+  }
+  updateSocketHistory();
+  return res.send('success!');
 });
 
 function serialFakeTest() {
@@ -286,8 +390,11 @@ function serialReceived(data) {
     if (config.DEBUG) console.log('Starting record for: ' + allIds[nextId]);
     fs.mkdir('tmp/' + allIds[nextId] + '/');
     for (var i = 0; i < sockets.length; i++) {
-      sockets[i].broadcast.emit('start', {'id': allIds[nextId]});
+      if (sockets[i].connected) {
+        sockets[i].broadcast.emit('start', {'id': allIds[nextId]});
+      }
     }
+    serialData = [];
   } else if (data === 'B') {
     if (config.DEBUG) console.log('Setting data for: ' + allIds[nextId]);
     var startTime = serialData[0][0];
@@ -311,8 +418,12 @@ function serialReceived(data) {
   } else {
     if (config.DEBUG) console.log('Received data for peg: ' + data);
     for (var i = 0; i < sockets.length; i++) {
-      sockets[i].broadcast.emit('peg', {'index': data});
+      if (sockets[i].connected) {
+        sockets[i].broadcast.emit('peg', {'index': data});
+      }
     }
     serialData.push([new Date().getTime(), data]);
   }
 }
+
+updateSocketHistory();

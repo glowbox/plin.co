@@ -1,0 +1,43 @@
+{{> header}}
+<div class="container">
+  <div class="row">
+    <div class="col-md-8">
+      <h2>History</h2>
+      <table class="history">
+        <tr class="row">
+          <th class="col-md-1">id</th>
+          <th class="col-md-3">twitter</th> 
+          <th class="col-md-2">complete</th>
+          <th class="col-md-2">saved</th>
+          <th class="col-md-4">tweeted</th>
+        </tr>
+        {{#history}}
+          <tr class="row">
+            <td class="col-md-1">{{id}}</td>
+            <td class="col-md-3">{{twitter}}</td> 
+            <td class="col-md-2 {{complete}}"> </td>
+            <td class="col-md-2 {{saved}}"> </td>
+            <td class="col-md-4 {{tweeted}}"> </td>
+          </tr>
+        {{/history}}
+      </table>
+    </div>
+    <div class="col-md-4">
+      <button type="button" class="btn btn-default btn-lg btn-danger next-user">
+        Next User
+      </button>
+      <h2>Add user</h2>
+      <div class="input-group">
+        <span class="input-group-addon">@</span>
+        <input type="text" class="form-control username" placeholder="Username">
+      </div>
+      <h2>Queue</h2>
+      <ul class="queue">
+        {{#queue}}
+          <li>{{.}} <a href="#" data-username="{{.}}">Remove</a></li></li>
+        {{/queue}}
+      </ul>
+    </div>
+  </div>
+</div>
+{{> footer}}

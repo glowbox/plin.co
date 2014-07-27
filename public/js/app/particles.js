@@ -4,8 +4,8 @@ function ParticleEsplode(board, puckID) {
   this.board = board;
   this.puckID = puckID;
 
-  this.gifLength = 8000;
-  this.framesPerSecond = 20;
+  this.gifLength = 4000;
+  this.framesPerSecond = 5;
 
   this.particleCount = 3000;
   this.particles = [];
@@ -20,6 +20,10 @@ function ParticleEsplode(board, puckID) {
 
   this.world;
   this.hideGeometry = true;
+
+  this.geometry = [];
+
+  canvas.className = '';
 
   Physics.behavior('pin-constraints', function( parent ){
     return {
@@ -73,6 +77,7 @@ Physics(function (world) {
           hidden: self.hideGeometry,
           restitution: 0.9,
       });
+      self.geometry.push(ball);
       world.add(ball);
       pinConstraints.add(ball, ball.state.pos);
 
@@ -94,6 +99,7 @@ Physics(function (world) {
 
             // restitution: 0.9
         });
+        self.geometry.push(baffle);
         world.add(baffle);
         self.baffle.push(baffle);
         pinConstraints.add(baffle, baffle.state.pos);
@@ -123,6 +129,7 @@ Physics(function (world) {
                 angleIndicator: 'none'
             }
           });
+          self.geometry.push(bumper);
           world.add(bumper);
           pinConstraints.add(bumper, bumper.state.pos);
         }
@@ -191,6 +198,7 @@ Physics(function (world) {
 
             // restitution: 0.9
         });
+        self.geometry.push(circ);
         this.world.add(circ);
 
         this.color = {
@@ -212,9 +220,6 @@ Physics(function (world) {
   },
 
   this.render = function() {
-    
-    // context.fillStyle = 'black';
-    // context.fillRect(0, 0, canvas.width, canvas.height);
 
     // for(var i = 0; i < this.particleCount; i++) {
 
@@ -235,5 +240,12 @@ Physics(function (world) {
     //     }
     //   }
     // }
+  }
+
+  this.destroy = function() {
+    for (var i = 0; i < this.geometry.length; i++) {
+      this.world.remove(this.geometry[i]);
+    }
+    Physics.util.ticker.stop();
   }
 }

@@ -145,14 +145,25 @@ window.app = app;
   var contexts = [];
   var gifSize = {};
 
+  var runIds = [];
+
 
   $(function() {
+
+    $(window).bind('keypress', function(e) {
+      // viz.destroy();
+      // viz = chooseViz(puckID);
+      // resizeCanvas();
+      // hasStarted = false;
+      // $.get('/play');
+    });
 
     if (live) {
       socket = io('http://localhost');
       socket.on('connect', function(){
         if (DEBUG) app.log('connected!');
         socket.on('peg', function(data){
+          if (DEBUG) app.log(data.index);
           if (lastPeg !== parseInt(data.index, 10)) {
             lastPeg = parseInt(data.index, 10);
             if (!hasStarted) {
@@ -164,7 +175,20 @@ window.app = app;
           }
         });
         socket.on('start', function(data){
-          if (DEBUG) app.log('NEW ID: ' + data.id);
+          if (DEBUG) app.log('RUNNING ID: ' + data.id);
+        });
+        socket.on('reset', function(data){
+          puckID = data.id
+          viz.destroy();
+          viz = chooseViz(puckID);
+          resizeCanvas();
+          hasStarted = false;
+          $.get('/play');
+        });
+        socket.on('end', function(data){
+          puckID = data.id;
+          hasStarted = false;
+          if (DEBUG) app.log('NEXT ID: ' + data.id);
         });
         socket.on('disconnect', function(){});
       });
@@ -174,8 +198,6 @@ window.app = app;
     camera.position.z = 450;
 
     scene = new THREE.Scene();
-
-    
 
     renderer = new THREE.CanvasRenderer();
     renderer.setClearColor( 0xffffff );
@@ -203,13 +225,8 @@ window.app = app;
     }
 
     board = new Board(SHOW_PEGS);
-    if (parseInt(puckID.toLowerCase(), 36) % 3 == 1) {
-      viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
-    } else if (parseInt(puckID.toLowerCase(), 36) % 3 == 2) {
-      viz = new VoronoiViz(board, parseInt(puckID.toLowerCase(), 36));
-    } else {
-      viz = new BirdsViz(board, parseInt(puckID.toLowerCase(), 36));
-    }
+    viz = chooseViz('1');
+
     // viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
 
     worker = new Worker( '/js/app/worker.js' );
@@ -297,6 +314,16 @@ window.app = app;
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize( window.innerWidth, window.innerHeight );
+  }
+
+  function chooseViz(id) {
+    if (parseInt(id.toLowerCase(), 36) % 3 == 1) {
+      return new ParticleEsplode(board, parseInt(id.toLowerCase(), 36));
+    } else if (parseInt(id.toLowerCase(), 36) % 3 == 2) {
+      return new VoronoiViz(board, parseInt(id.toLowerCase(), 36));
+    } else {
+      return new BirdsViz(board, parseInt(id.toLowerCase(), 36));
+    }
   }
 
   function uploadImages() {

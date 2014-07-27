@@ -4,7 +4,7 @@ var Bird = function () {
 
   THREE.Geometry.call( this );
 
-  v(   5,   0,   0 );
+  v(   4,   0,   0 );
   v( - 5, - 2,   1 );
   v( - 5,   0,   0 );
   v( - 5, - 2, - 1 );
@@ -316,7 +316,7 @@ var Boid = function() {
 }
 
 function BirdsViz(board, puckID) {
-  
+  var self = this;
   this.board = board;
   this.puckID = puckID;
   this.double = true;
@@ -329,25 +329,18 @@ function BirdsViz(board, puckID) {
   SCREEN_WIDTH_HALF = SCREEN_WIDTH  / 2,
   SCREEN_HEIGHT_HALF = SCREEN_HEIGHT / 2;
   
-  var birds, bird;
+  this.birds = [];
+  var bird;
 
-  var boid, boids;
+  this.boids = [];
+  var boid;
 
-  var stats;
-
-  init();
-
-  function init() {
-
-
-      birds = [];
-      boids = [];
-
+  this.init = function() {
       canvas.className = 'invert';
 
       for ( var i = 0; i < 300; i ++ ) {
 
-          boid = boids[ i ] = new Boid();
+          boid = this.boids[ i ] = new Boid();
           boid.position.x = Math.random() * 400 - 200;
           boid.position.y = Math.random() * 800 - 400;
           boid.position.z = Math.random() * 400 - 200;
@@ -360,7 +353,7 @@ function BirdsViz(board, puckID) {
           boid.setAvoidWalls( true );
           boid.setWorldSize( 300, 600, 400 );
 
-          bird = birds[ i ] = new THREE.Mesh( new Bird(), new THREE.MeshBasicMaterial( { color:'#000000', side: THREE.DoubleSide } ) );
+          bird = this.birds[ i ] = new THREE.Mesh( new Bird(), new THREE.MeshBasicMaterial( { color:'#000000', side: THREE.DoubleSide } ) );
           bird.phase = Math.floor( Math.random() * 62.83 );
           scene.add( bird );
 
@@ -384,12 +377,15 @@ function BirdsViz(board, puckID) {
   }
 
   this.render = function() {
-    for ( var i = 0, il = birds.length; i < il; i++ ) {
-      boid = boids[ i ];
-      boid.run( boids );
+    context.fillStyle = 'white';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    
+    for ( var i = 0, il = this.birds.length; i < il; i++ ) {
+      boid = this.boids[ i ];
+      boid.run( this.boids );
 
-      bird = birds[ i ];
-      bird.position.copy( boids[ i ].position );
+      bird = this.birds[ i ];
+      bird.position.copy( this.boids[ i ].position );
 
       color = bird.material.color;
       bird.material.opacity = 1 - ( 500 - bird.position.z ) / 1000;
@@ -406,12 +402,23 @@ function BirdsViz(board, puckID) {
   this.hit = function(runCurr, index) {
     var coor = board.getPinCoordinates(index);
     var vector = new THREE.Vector3( coor.x - SCREEN_WIDTH_HALF, - coor.y + SCREEN_HEIGHT_HALF);
-
-    for ( var i = 0, il = boids.length; i < il; i++ ) {
-        boid = boids[ i ];
+    for ( var i = 0, il = self.boids.length; i < il; i++ ) {
+        boid = self.boids[ i ];
         vector.z = boid.position.z;
         boid.repulse( vector );
 
     }
   }
+
+  this.destroy = function() {
+    for ( var i = 0; i < this.birds.length; i++ ) {
+      scene.remove(viz.birds[i]);
+    }
+    this.birds = [];
+    this.boids = [];
+    context.fillStyle = 'black';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  this.init();
 }

@@ -1,7 +1,39 @@
 @import "compass";
-@import "compass/reset";
 
 .invert {
   -webkit-filter: invert(100%);
   filter: invert(100%);
+}
+
+.container {
+  margin-top: 30px;
+  max-width: 960px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+table {
+  tr {
+    &:nth-child(odd) {
+      background: #CCC;
+    }
+    &:nth-child(even) {
+      background: #FFF;
+    }
+    td:nth-child(1) {
+      
+    }
+
+    .false {
+      background: rgba(255, 0, 0, .5);
+    }
+
+    .progress {
+      background: rgba(255, 255, 0, .5);
+    }
+
+    .true {
+      background: rgba(0, 255, 0, .5);
+    }
+  }
 }

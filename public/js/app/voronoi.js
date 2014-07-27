@@ -38,6 +38,8 @@ function VoronoiViz(board, puckID) {
   }
   this.lastHit = {x:this.points[0][0], y:this.points[0][1]}
 
+  canvas.className = '';
+
   this.hit = function(runCurr, index) {
     var coor = board.getPinCoordinates(index);
 
@@ -86,6 +88,10 @@ function VoronoiViz(board, puckID) {
     for (var i = 0, n = this.voronoiData.length; i < n; ++i) {
       if (draw(this.voronoiData[i])) context.stroke();
     }
+  }
+
+  this.destroy = function() {
+    this.voronoiData = [];
   }
 
   function draw(cell) {
