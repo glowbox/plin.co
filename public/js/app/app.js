@@ -107,7 +107,7 @@ $(function() {
   }
 
   board = new Board(SHOW_PEGS);
-  viz = chooseViz('1');
+  viz = chooseViz(puckID);
 
   // viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
 
