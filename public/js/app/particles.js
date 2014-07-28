@@ -84,9 +84,9 @@ Physics(function (world) {
       if (i < 7) {
         var baffle = Physics.body('rectangle', {
             x: coors.x,
-            y: window.innerHeight - board.pegSpacing / 2,
+            y: window.innerHeight - (board.pegSpacing * .8) / 2,
             width: board.pegSpacing / 6,
-            height: board.pegSpacing,
+            height: (board.pegSpacing * .8),
             mass: 10000000000,
             styles: {
                 fillStyle: '#999999',

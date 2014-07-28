@@ -36,7 +36,13 @@ $(function() {
   $('.next-user').bind('touch, mousedown', function(e) {
     $.post('/next-user/', {'username': $(this).val()});
   })
+  $('.end-run').bind('touch, mousedown', function(e) {
+    $.post('/end-run/');
+  })
   $('.queue li a').bind('touch, mousedown', removeUser);
+  $('.free-mode').bind('touch, mousedown', function(e) {
+    $.post('/free-run/', {'mode': $(this).attr('data-mode')});
+  })
 
   function removeUser(e) {
     if (e) {

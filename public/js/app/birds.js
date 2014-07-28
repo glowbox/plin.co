@@ -42,7 +42,7 @@ var Boid = function() {
 
     var vector = new THREE.Vector3(),
     _acceleration, _width = 50, _height = 20, _depth = 50, _goal, _neighborhoodRadius = 10,
-    _maxSpeed = 4, _maxSteerForce = 0.1, _avoidWalls = true;
+    _maxSpeed = 4, _maxSteerForce = 0.4, _avoidWalls = true;
 
     this.position = new THREE.Vector3();
     this.velocity = new THREE.Vector3();
@@ -333,6 +333,7 @@ function BirdsViz(board, puckID) {
   var bird;
 
   this.boids = [];
+  this.locations = [];
   var boid;
 
   this.init = function() {
@@ -344,8 +345,8 @@ function BirdsViz(board, puckID) {
           boid.position.x = Math.random() * 400 - 200;
           boid.position.y = Math.random() * 800 - 400;
           boid.position.z = Math.random() * 400 - 200;
-          // boid.position.x = 0;
-          // boid.position.y = 0;
+          // boid.position.x = 100;
+          // boid.position.y = 100;
           // boid.position.z = 0;
           boid.velocity.x = Math.random() * 2 - 1;
           boid.velocity.y = Math.random() * 2 - 1;
@@ -379,7 +380,7 @@ function BirdsViz(board, puckID) {
   this.render = function() {
     context.fillStyle = 'white';
     context.fillRect(0, 0, canvas.width, canvas.height);
-    
+
     for ( var i = 0, il = this.birds.length; i < il; i++ ) {
       boid = this.boids[ i ];
       boid.run( this.boids );
@@ -401,11 +402,13 @@ function BirdsViz(board, puckID) {
 
   this.hit = function(runCurr, index) {
     var coor = board.getPinCoordinates(index);
-    var vector = new THREE.Vector3( coor.x - SCREEN_WIDTH_HALF, - coor.y + SCREEN_HEIGHT_HALF);
+    var vector = new THREE.Vector3( coor.x - SCREEN_WIDTH_HALF, - coor.y + SCREEN_HEIGHT_HALF, 600);
+    this.locations.push(vector);
     for ( var i = 0, il = self.boids.length; i < il; i++ ) {
         boid = self.boids[ i ];
         vector.z = boid.position.z;
-        boid.repulse( vector );
+        // boid.repulse( vector );
+        boid.setGoal(this.locations[Math.floor(Math.random() * this.locations.length)]);
 
     }
   }

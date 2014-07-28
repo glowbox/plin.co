@@ -133,6 +133,7 @@ window.app = app;
         SCREEN_WIDTH_HALF = SCREEN_WIDTH  / 2,
         SCREEN_HEIGHT_HALF = SCREEN_HEIGHT / 2;
   var DEBUG = false;
+  var SHOW_PEGS = false;
 
   var gifs = [];
   var board;
@@ -147,6 +148,8 @@ window.app = app;
 
   var runIds = [];
 
+  var freeMode = true;
+
 
   $(function() {
 
@@ -155,7 +158,7 @@ window.app = app;
       // viz = chooseViz(puckID);
       // resizeCanvas();
       // hasStarted = false;
-      // $.get('/play');
+      // $.post('/play');
     });
 
     if (live) {
@@ -178,12 +181,13 @@ window.app = app;
           if (DEBUG) app.log('RUNNING ID: ' + data.id);
         });
         socket.on('reset', function(data){
-          puckID = data.id
+          freeMode = data.freemode;
+          puckID = data.id;
           viz.destroy();
           viz = chooseViz(puckID);
           resizeCanvas();
           hasStarted = false;
-          $.get('/play');
+          // $.post('/play');
         });
         socket.on('end', function(data){
           puckID = data.id;
@@ -209,8 +213,6 @@ window.app = app;
     context = canvas.getContext('2d');
 
     onWindowResize();
-
-    SHOW_PEGS = false;
     
     startTime = new Date().getTime() + 1000;
     lastImageTime = 0;
@@ -224,7 +226,11 @@ window.app = app;
       Two.Resolution = 10;
     }
 
-    board = new Board(SHOW_PEGS);
+    board = new Board(SHOW_PEGS, function(e) {
+                                    var pegNum = $(this).index();
+                                    if (DEBUG) app.log(pegNum);
+                                    viz.hit(++runCurr, pegNum);
+                                  });
     viz = chooseViz(puckID);
 
     // viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
@@ -236,7 +242,7 @@ window.app = app;
 
     function animate() {
       var now = new Date().getTime();
-      if (live && hasStarted) {
+      if (live && hasStarted && !freeMode) {
         var diffMain = now - startTime;
         if (diffMain > 0 && diffMain < viz.gifLength) {
           var diffLast = now - lastImageTime;
@@ -336,73 +342,5 @@ window.app = app;
     // worker.postMessage(passData);
     $.post('/upload/', {'num': 0, 'pngs': pngs, 'type': 'image', 'fps': viz.framesPerSecond, 'size': gifSize});
     contexts = [];
-  }
-
-
-  function Board(showPegs) {
-    this.pegsHit = [];
-
-    this.numPegs = 78;
-    this.pegRadius = 3;
-    this.BOARD_RATIO = 36/57;
-    this.pegHeight = (window.innerHeight - 50);
-    this.pegWidth = this.pegHeight * this.BOARD_RATIO;
-    if (window.innerWidth < this.pegWidth) {
-      this.pegWidth = (window.innerWidth - 50);
-      this.pegHeight = this.pegWidth / this.BOARD_RATIO;
-    }
-    this.pegs = [];
-    this.pegSpacing = this.pegWidth / 7;
-    this.pegOffsetX = (window.innerWidth - this.pegWidth) / 2 + this.pegSpacing / 2;
-    this.pegOffsetY = (window.innerHeight - this.pegHeight) / 2;
-
-    this.init = function() {
-      if (showPegs) {
-        two = new Two({
-          type: Two.Types['svg'],
-          fullscreen: true
-        }).appendTo(document.body);
-
-        Two.Resolution = 10;
-      }
-      for (var i = 0; i < this.numPegs; i++) {
-        var localPin = i % 13;
-        var overallWidth = 13 * this.pegSpacing;
-        var x = 0;
-        var y = Math.floor(i / 13) * (this.pegSpacing * .866666667 * 2) + this.pegOffsetY + (this.pegSpacing * .8666) * 1.5;
-        if (localPin <= 6) {
-          var num = i;
-          if (i === 65) {
-            num = 0;
-          }
-          x = (num /13 * overallWidth) % overallWidth + this.pegOffsetX;
-          y -= this.pegSpacing * .866666667;
-        } else {
-          x = (i /13 * overallWidth) % overallWidth - (overallWidth / 2)  + this.pegOffsetX;
-        }
-
-        if (showPegs) {
-          var peg = two.makeCircle(x, y, this.pegRadius);
-          peg.fill = 'rgba(255, 255, 255, ' + i/this.numPegs + ')';
-          two.update();
-          $(peg._renderer.elem)
-            .css('cursor', 'pointer')
-            .click(function(e) {
-              var pegNum = $(this).index();
-              if (DEBUG) app.log(pegNum);
-              viz.hit(++runCurr, pegNum);
-            });
-        }
-        this.pegs.push({x: x, y: y});
-      }
-    }
-
-    this.getPinCoordinates = function(index) {
-      return {
-        x: this.pegs[index].x,
-        y: this.pegs[index].y
-      }
-    }
-    this.init();
   }
 })( window, window.document );

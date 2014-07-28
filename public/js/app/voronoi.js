@@ -6,7 +6,7 @@ function VoronoiViz(board, puckID) {
   this.runningNum = puckID;
 
   this.gifLength = 5000;
-  this.framesPerSecond = 10;
+  this.framesPerSecond = 5;
 
   this.lastHit = {x: 0, y: 0};
   this.isFirst = true;

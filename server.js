@@ -53,6 +53,10 @@ var images = {};
 var allIds = [];
 var nextId;
 var serialData = [];
+var isRunning = false;
+var pegMap = {};
+var isCalibrating = false;
+var currCalibrationPin = -1;
 
 var knoxClient = knox.createClient({
   key: process.env.AWS_ACCESS_KEY_ID,
@@ -75,6 +79,18 @@ if (process.env.REDISCLOUD_URL) {
   var redisURL = url.parse(process.env.REDISCLOUD_URL);
   client = redis.createClient(redisURL.port, redisURL.hostname, {no_ready_check: true});
   client.auth(redisURL.auth.split(":")[1]);
+
+  client.get('pegMap', function (e, r) {
+    if (r) {
+      var data = JSON.parse(r);
+      pegMap = data['map'];
+    }
+  });
+  // var m = {};
+  // for (var i = 0; i < 85; i++) {
+  //   m[i] = i;
+  // }
+  // client.set('pegMap', JSON.stringify({'map': m}))
 
   client.get('allIds', function (e, r) {
     if (r) {
@@ -200,9 +216,10 @@ app.post('/upload/', function(req, res) {
     
 
   } else {
-    history[history.length - 1]['complete'] = true;
-    history[history.length - 1]['saved'] = 'progress';
-    updateSocketHistory();
+    if (history.length) {
+      history[history.length - 1]['saved'] = 'progress';
+      updateSocketHistory();
+    }
 
     var tempId = allIds[nextId];
     var gifName = allIds[nextId] + '.gif';
@@ -306,15 +323,62 @@ app.get(/^\/([a-z]{3}).gif$/, function(req, res) {
   getGif(req, res);
 });
 
-app.get('/play', function(req, res) {
-  console.log('play!!!!');
-  serialFakeTest();
+app.post('/play', function(req, res) {
+  serialFakeTest(req.body.skip);
+  return res.send('success!');
+});
+
+app.post('/end-run/', function(req, res) {
+  serialReceived('B');
+  history[history.length - 1]['complete'] = true;
+  updateSocketHistory();
+  isRunning = false;
+  return res.send('success!');
+});
+
+app.post('/free-run/', function(req, res) {
+  if (history.length) {
+    history[history.length - 1]['complete'] = true;
+    updateSocketHistory();
+  }
+  serialReceived('B');
+  isRunning = false;
+  for (var i = 0; i < sockets.length; i++) {
+    if (sockets[i].connected) {
+      sockets[i].broadcast.emit('reset', {'id': req.body.mode, 'freemode': true});
+    }
+  }
   return res.send('success!');
 });
 
 app.get('/admin', function(req, res) {
   console.log(queue);
   return res.render('admin.mustache', {'js': 'admin', 'queue': queue, 'history': history});
+});
+
+app.get('/calibrate', function(req, res) {
+  // client.set('queue', JSON.stringify(queueJSON), redis.print);
+  return res.render('calibrate.mustache', {'js': 'calibrate', 'map': JSON.stringify(pegMap)});
+});
+
+app.post('/start-calib', function(req, res) {
+  isCalibrating = true;
+  return res.send('success!');
+});
+
+app.post('/stop-calib', function(req, res) {
+  isCalibrating = false;
+  return res.send('success!');
+});
+
+app.post('/pin-calib', function(req, res) {
+  currCalibrationPin = req.body.peg;
+  return res.send('success!');
+})
+
+app.post('/peg-hit', function(req, res) {
+  serialReceived(req.body.peg);
+  return res.send('success!');
 });
 
 app.post('/add-user/', function(req, res) {
@@ -361,7 +425,7 @@ app.post('/next-user/', function(req, res) {
   })
   for (var i = 0; i < sockets.length; i++) {
     if (sockets[i].connected) {
-      sockets[i].broadcast.emit('reset', {'id': allIds[nextId]});
+      sockets[i].broadcast.emit('reset', {'id': allIds[nextId], 'freemode': false});
       sockets[i].broadcast.emit('queue', {'queue': queue});
     }
   }
@@ -369,20 +433,20 @@ app.post('/next-user/', function(req, res) {
   return res.send('success!');
 });
 
-function serialFakeTest() {
-  setTimeout(function() {
-    serialReceived('A');
-  }, 1000);
+function serialFakeTest(skip) {
+  if (skip) {
+    setTimeout(function() {
+      serialReceived('A');
+    }, 1000);
+  }
   var tempPegs = [2, 3, 9, 16, 17, 23, 29, 28, 35, 36, 42, 48, 55, 54, 61];
+  // var tempPegs = [4, 3, 2, 1, 0];
   var currPeg = 0;
   for (var i = 0; i < tempPegs.length; i++) {
     setTimeout(function() {
       serialReceived(tempPegs[currPeg++]);
     }, 1500 + i * 200);
   }
-  setTimeout(function() {
-    serialReceived('B');
-  }, 5000);
 }
 
 function serialReceived(data) {
@@ -395,35 +459,54 @@ function serialReceived(data) {
       }
     }
     serialData = [];
+    isRunning = true;
   } else if (data === 'B') {
     if (config.DEBUG) console.log('Setting data for: ' + allIds[nextId]);
-    var startTime = serialData[0][0];
-    for (var i = 0; i < serialData.length; i++) {
-      serialData[i][0] = (serialData[i][0] - startTime) / 1000;
-    }
-    var dataComplete = {
-      runs: [
-        serialData
-      ]
-    }
-    client.set(allIds[nextId], JSON.stringify(dataComplete), redis.print);
-    serialData = [];
-    client.get('allIds', function (e, r) {
-      if (r) {
-        var idData = JSON.parse(r);
-        idData['last'] = allIds[nextId];
-        client.set('allIds', JSON.stringify(idData), redis.print);
+    if (serialData.length) {
+      var startTime = serialData[0][0];
+      for (var i = 0; i < serialData.length; i++) {
+        serialData[i][0] = (serialData[i][0] - startTime) / 1000;
       }
-    });
+      var dataComplete = {
+        runs: [
+          serialData
+        ]
+      }
+      client.set(allIds[nextId], JSON.stringify(dataComplete), redis.print);
+      serialData = [];
+      client.get('allIds', function (e, r) {
+        if (r) {
+          var idData = JSON.parse(r);
+          idData['last'] = allIds[nextId];
+          client.set('allIds', JSON.stringify(idData), redis.print);
+        }
+      });
+    }
+    isRunning = false;
   } else {
     if (config.DEBUG) console.log('Received data for peg: ' + data);
-    for (var i = 0; i < sockets.length; i++) {
-      if (sockets[i].connected) {
-        sockets[i].broadcast.emit('peg', {'index': data});
+    if (!isCalibrating) {
+      if (isRunning) {
+        serialData.push([new Date().getTime(), pegMap[parseInt(data, 10)]]);
+      }
+      for (var i = 0; i < sockets.length; i++) {
+        if (sockets[i].connected) {
+          console.log(i);
+          sockets[i].broadcast.emit('peg', {'index': pegMap[parseInt(data, 10)]});
+        }
+      }
+    } else {
+      pegMap[parseInt(data, 10)] = parseInt(currCalibrationPin, 10);
+      client.set('pegMap', JSON.stringify({'map': pegMap}));
+      console.log(pegMap);
+      for (var i = 0; i < sockets.length; i++) {
+        if (sockets[i].connected) {
+          console.log(i);
+          sockets[i].broadcast.emit('peg', {'index': pegMap[parseInt(data, 10)]});
+        }
       }
     }
-    serialData.push([new Date().getTime(), data]);
   }
 }
 
-updateSocketHistory();
+setTimeout(updateSocketHistory, 1000);
