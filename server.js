@@ -362,12 +362,13 @@ app.get(/^\/([a-z]{3}).png$/, function(req, res) {
 });
 
 app.post('/play', function(req, res) {
+  console.log('a');
   serialFakeTest(req.body.skip);
   return res.send('success!');
 });
 
 app.post('/end-run/', function(req, res) {
-  serialReceived('B');
+  serialReceived('stop');
   history[history.length - 1]['complete'] = true;
   updateSocketHistory();
   isRunning = false;
@@ -379,7 +380,7 @@ app.post('/free-run/', function(req, res) {
     history[history.length - 1]['complete'] = true;
     updateSocketHistory();
   }
-  serialReceived('B');
+  serialReceived('stop');
   isRunning = false;
   for (var i = 0; i < sockets.length; i++) {
     if (sockets[i].connected) {
@@ -455,7 +456,7 @@ app.post('/next-user/', function(req, res) {
   var queueJSON = {
     'queue': queue
   }
-  serialReceived('A');
+  serialReceived('start');
   client.set('queue', JSON.stringify(queueJSON), redis.print);
   history.push({
     'twitter': user.length ? user[0] : '',
@@ -475,7 +476,7 @@ app.post('/next-user/', function(req, res) {
 function serialFakeTest(skip) {
   if (skip) {
     setTimeout(function() {
-      serialReceived('A');
+      serialReceived('start');
     }, 1000);
   }
   var tempPegs = [2, 3, 9, 16, 17, 23, 29, 28, 35, 36, 42, 48, 55, 54, 61];
@@ -483,15 +484,16 @@ function serialFakeTest(skip) {
   var currPeg = 0;
   for (var i = 0; i < tempPegs.length; i++) {
     setTimeout(function() {
-      serialReceived(tempPegs[currPeg++]);
+      serialReceived(String.fromCharCode(tempPegs[currPeg++] + 65));
     }, 1500 + i * 200);
   }
 }
 
 function serialReceived(data) {
   console.log('RAW CODE: ' + data);
+  var raw = data;
   data = data.toString().charCodeAt(0) - 65;
-  if (data === 'A') {
+  if (raw === 'start') {
     if (config.DEBUG) console.log('Starting record for: ' + allIds[nextId]);
     fs.mkdir('tmp/' + allIds[nextId] + '/');
     for (var i = 0; i < sockets.length; i++) {
@@ -501,7 +503,7 @@ function serialReceived(data) {
     }
     serialData = [];
     isRunning = true;
-  } else if (data === 'B') {
+  } else if (raw === 'stop') {
     if (config.DEBUG) console.log('Setting data for: ' + allIds[nextId]);
     if (serialData.length) {
       var startTime = serialData[0][0];

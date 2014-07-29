@@ -339,7 +339,7 @@ function BirdsViz(board, puckID) {
   this.init = function() {
       canvas.className = 'invert';
       var z = Math.random() * 400 - 200;
-      z = 300;
+      z = 0;
       var startPoint = new THREE.Vector3( 0, -200, z);
       for ( var i = 0; i < 300; i ++ ) {
 

@@ -1,10 +1,14 @@
 {{> header}}
-<h1>plin.co</h1>
-<p>Hone of plin.co, a modern, web-enabled Plinko. It's for the kids.</p>
-<h2>Recent runs</h2>
-<ul>
-  {{#recent}}
-    <li><a href="/{{.}}">{{.}}</a></li>
-  {{/recent}}
-</ul>
+<div class="container center">
+  <h1>plin.co</h1>
+  <p>Home of plin.co, a modern, web-enabled Plinko. It's for the kids.</p>
+  <p>Made with love and wires by the ineffable <a href="https://twitter.com/purdybot">@purdybot</a> and the unspeakable <a href="https://twitter.com/thisisjohnbrown">@thisisjohnbrown</a></p>
+  <h2>Recent runs</h2>
+  <ul>
+    {{#recent}}
+      <li><a href="/{{.}}">{{.}}</a></li>
+    {{/recent}}
+  </ul>
+  <p>Want to see more runs? Check out <a href="https://twitter.com/plinco">@plinco</a>.
+</div>
 {{> footer}}

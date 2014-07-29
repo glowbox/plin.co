@@ -1,5 +1,6 @@
 body {
   background: #303030;
+  color: white;
 }
 
 .container {
@@ -9,6 +10,17 @@ body {
   margin-right: auto;
 }
 
+.center {
+  text-align: center;
+}
+
+li {
+  list-style: none;
+}
+
+table {
+  color: black;
+}
 table tr:nth-child(odd) {
   background: #CCC;
 }
