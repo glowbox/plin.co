@@ -3,7 +3,6 @@ function VoronoiViz(board, puckID) {
   
   this.board = board;
   this.puckID = puckID;
-  this.runningNum = puckID;
 
   this.gifLength = 5000;
   this.framesPerSecond = 5;
@@ -17,19 +16,9 @@ function VoronoiViz(board, puckID) {
     .clipExtent([[0, 0], [1500, 1500]]);
 
   this.colors = [];
-  this.color = {
-    r: Math.floor((puckID * 14.55) % 255),
-    g: Math.floor((puckID * 13.66) % 255),
-    b: Math.floor((puckID * 17.34) % 255)
-  }
 
   for (var i = 0; i < 9; i++) {
-    this.colors.push('rgb(' + this.color.r + ',' + this.color.g + ' ,' + this.color.b + ' )');
-    this.color = {
-      r: Math.floor((this.color.r * 14.55) % 255),
-      g: Math.floor((this.color.g * 13.66) % 255),
-      b: Math.floor((this.color.b * 17.34) % 255)
-    }
+    this.colors.push('rgb(' + Math.floor(Math.random() * 255) + ',' + Math.floor(Math.random() * 255) + ' ,' + Math.floor(Math.random() * 255) + ' )');
   }
   
   for(var i = 0; i < board.pegs.length; i++){
@@ -46,10 +35,9 @@ function VoronoiViz(board, puckID) {
     var deltaX = (coor.x - this.lastHit.x);
     var deltaY = (coor.y - this.lastHit.y); 
 
-    for(var i = 0; i < this.runningNum % 5 + 3; i++){ 
-      var x = (((this.runningNum * 14.434) % 1) * deltaX) + this.lastHit.x + (((this.runningNum * 13.341) % 1) * 20 - 10);
-      var y = (((this.runningNum * 18.822) % 1) * deltaY) + this.lastHit.y + (((this.runningNum * 12.645) % 1) * 20 - 10);
-      this.runningNum = this.runningNum * 1.0327;
+    for(var i = 0; i < Math.random() * 5 + 3; i++){ 
+      var x = (Math.random() * deltaX) + this.lastHit.x + (Math.random() * 20 - 10);
+      var y = (Math.random() * deltaY) + this.lastHit.y + (Math.random() * 20 - 10);
       this.points.push([x,y]);
     }
     this.updateVoronoi();

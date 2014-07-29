@@ -7,13 +7,42 @@
         <meta name="author" content="Ben Purdy & John Brown">
 
         <title>plin.co</title>
+        
+        {{^id}}
+            <meta property="og:site_name" content="plin.co">
+            <meta property="og:title" content="plin.co">
+            <meta property="og:url" content="http://plin.co">
+            <meta property="og:type" content="website">
+            <meta property="og:image" content="http://plin.co/img/600x600.png">
+            <meta property="og:description" content="plin.co is amazing!">
+        {{/id}}
+        {{#id}}
+            <meta property="og:site_name" content="plin.co">
+            <meta property="og:title" content="plin.co">
+            <meta property="og:url" content="http://3da811e.ngrok.com/{{id}}">
+            <meta property="og:type" content="website">
+            <meta property="og:image" content="http://plin-co.s3.amazonaws.com/{{id}}.png">
+            <meta property="og:description" content="plin.co is amazing!">
+        {{/id}}
 
-        <meta property="og:site_name" content="plin.co">
-        <meta property="og:title" content="plin.co">
-        <meta property="og:url" content="http://plin.co">
-        <meta property="og:type" content="website">
-        <meta property="og:image" content="http://plin.co/img/600x600.png">
-        <meta property="og:description" content="plin.co is amazing.">
+        {{^id}}
+            <meta name="twitter:url" content="http://plin.co">
+            <meta name="twitter:card" content="summary_large_image">
+            <meta name="twitter:creator" content="@plinco">
+            <meta name="twitter:site" content="@plinco">
+            <meta name="twitter:title" content="plin.co">
+            <meta name="twitter:description" content="plin.co is amazing">
+            <meta name="twitter:image:src" content="http://plin.co/img/600x600.png">
+        {{/id}}
+        {{#id}}
+            <meta name="twitter:url" content="http://3da811e.ngrok.com/{{id}}">
+            <meta name="twitter:card" content="summary_large_image">
+            <meta name="twitter:creator" content="@plinco">
+            <meta name="twitter:site" content="@plinco">
+            <meta name="twitter:title" content="plin.co">
+            <meta name="twitter:description" content="plin.co is amazing">
+            <meta name="twitter:image:src" content="http://3da811e.ngrok.com/{{id}}.png">
+        {{/id}}
 
         <link rel="shortcut icon" href="/img/favicon.ico">
         <link href="/css/lib/bootstrap.min.css" rel="stylesheet" type="text/css"/>

@@ -12,11 +12,6 @@ function ParticleEsplode(board, puckID) {
   for(var i = 0; i < this.particleCount; i++){
     this.particles.push( {x:0, y:0, vx:0, vy:0, alive:false});
   }
-  this.color = {
-    r: Math.floor((puckID * 14.55) % 255),
-    g: Math.floor((puckID * 13.66) % 255),
-    b: Math.floor((puckID * 17.34) % 255)
-  }
 
   this.world;
   this.hideGeometry = true;
@@ -176,22 +171,17 @@ Physics(function (world) {
 
 
   this.addParticles = function(x, y, runCurr) {
-    var found = 0;
-    for(var i = 0; i < 1; i++){
+    for(var i = 0; i < 3; i++){
       if(!this.particles[i].alive) {
-        var speed = (this.color.r * 17.93) % 1 * 6;
-        var angle = (this.color.g * 16.13) % 1 * Math.PI * 2;
-
-        found++;
         var circ = Physics.body('circle', {
             x: x - 5,
             y: y - 20,
-            vy: -(this.color.b * 14.65) % 1 * .1,
-            vx: -.1 + (this.color.r * 12.39) % .2,
-            radius: (board.pegSpacing / 10) + (this.color.g * 16.43) % 1 * (board.pegSpacing / 10),
+            vy: -Math.random() * .1,
+            vx: -.1 + Math.random() * .2,
+            radius: (board.pegSpacing / 10) + Math.random() * (board.pegSpacing / 10),
             mass: .0000000001,
             styles: {
-                fillStyle: 'rgb(' + this.color.r + ',' + this.color.g + ' ,' + this.color.b + ' )',
+                fillStyle: 'rgb(' + Math.random() + ',' + Math.random() + ' ,' + Math.random() + ' )',
                 angleIndicator: 'none'
             },
             restitution: .0
@@ -200,16 +190,6 @@ Physics(function (world) {
         });
         self.geometry.push(circ);
         this.world.add(circ);
-
-        this.color = {
-          r: Math.floor((this.color.r * 14.55) % 255),
-          g: Math.floor((this.color.g * 13.66) % 255),
-          b: Math.floor((this.color.b * 17.34) % 255)
-        }
-
-        if(found >= 2){
-          return;
-        }
       }
     }
   }

@@ -42,7 +42,7 @@ var Boid = function() {
 
     var vector = new THREE.Vector3(),
     _acceleration, _width = 50, _height = 20, _depth = 50, _goal, _neighborhoodRadius = 10,
-    _maxSpeed = 4, _maxSteerForce = 0.4, _avoidWalls = true;
+    _maxSpeed = 2, _maxSteerForce = 0.4, _avoidWalls = true;
 
     this.position = new THREE.Vector3();
     this.velocity = new THREE.Vector3();
@@ -338,19 +338,22 @@ function BirdsViz(board, puckID) {
 
   this.init = function() {
       canvas.className = 'invert';
-
+      var z = Math.random() * 400 - 200;
+      z = 300;
+      var startPoint = new THREE.Vector3( 0, -200, z);
       for ( var i = 0; i < 300; i ++ ) {
 
           boid = this.boids[ i ] = new Boid();
-          boid.position.x = Math.random() * 400 - 200;
-          boid.position.y = Math.random() * 800 - 400;
+          // boid.position.x = Math.random() * 400 - 200;
+          // boid.position.y = Math.random() * 800 - 400;
           boid.position.z = Math.random() * 400 - 200;
-          // boid.position.x = 100;
-          // boid.position.y = 100;
-          // boid.position.z = 0;
+          boid.position.x = 0;
+          boid.position.y = -200;
+          boid.position.z = z;
           boid.velocity.x = Math.random() * 2 - 1;
           boid.velocity.y = Math.random() * 2 - 1;
           boid.velocity.z = Math.random() * 2 - 1;
+          boid.setGoal(startPoint);
           boid.setAvoidWalls( true );
           boid.setWorldSize( 300, 600, 400 );
 

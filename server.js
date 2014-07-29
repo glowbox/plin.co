@@ -49,6 +49,7 @@ if (process.env.TWITTER_CONSUMER_KEY) {
 
 var queue = [];
 var history = [];
+var recent = [];
 var images = {};
 var allIds = [];
 var nextId;
@@ -64,14 +65,14 @@ var knoxClient = knox.createClient({
   bucket: process.env.S3_BUCKET
 });
 
-// var SerialPort = require("serialport").SerialPort
-// var serialPort = new SerialPort("/dev/tty-usbserial1", {
-//   baudrate: 9600
-// }, false); // this is the openImmediately flag [default is true]
+var SerialPort = require("serialport").SerialPort
+var serialPort = new SerialPort("/dev/tty.usbmodem1411", {
+  baudrate: 9600
+}, false); // this is the openImmediately flag [default is true]
 
-// serialPort.open(function () {
-//   serialPort.on('data', serialReceived);
-// });
+serialPort.open(function () {
+  serialPort.on('data', serialReceived);
+});
 
 if (process.env.REDISCLOUD_URL) {
   var redis = require('redis');
@@ -112,6 +113,22 @@ if (process.env.REDISCLOUD_URL) {
       queue = JSON.parse(r).queue;
     }
   });
+
+  client.get('recent', function (e, r) {
+    if (r) {
+      recent = JSON.parse(r).recent;
+    }
+  });
+
+  // client.keys('*', function(e, keys) {
+  //   for(var i = 0, len = keys.length; i < len; i++) {
+  //     if (keys[i].length === 3) {
+  //       client.del(keys[i]);
+  //     }
+  //   }
+  // })
+
+  // client.set('recent', JSON.stringify({'recent': []}), redis.print);
 }
 
 app.use(bodyParser({limit: '50mb'}));
@@ -128,16 +145,16 @@ app.engine('mustache', require('hogan-middleware').__express);
 app.use(express.static(__dirname + '/public'));
 
 app.get('/', function(req, res){
-  return res.render('home.mustache', {'js': 'app'});
+  return res.render('home.mustache', {'js': 'home', 'recent': recent});
 });
 
 app.get('/live/test/', function(req, res){
   serialFakeTest();
-  return res.render('home.mustache', {'live': true, 'id': allIds[nextId], 'js': 'app'});
+  return res.render('app.mustache', {'live': true, 'id': allIds[nextId], 'js': 'app'});
 });
 
 app.get('/live/', function(req, res){
-  return res.render('home.mustache', {'live': true, 'js': 'app'});
+  return res.render('app.mustache', {'live': true, 'js': 'app'});
 });
 
 function isCallerMobile(req) {
@@ -162,7 +179,7 @@ function postTweet(tempId, gifName, path) {
     var status = 'Another round played! Check it out at http://plin.co/' + allIds[nextId] + '!';
     console.log(history[history.length - 1]);
     if (history[history.length - 1]['twitter'].length) {
-      status = 'Thanks for playing, @thisisjohnbrown. Check out your run at http://plin.co/' + allIds[nextId] + '!';
+      status = 'Thanks for playing, @' + history[history.length - 1]['twitter'] + '. Check out your run at http://plin.co/' + allIds[nextId] + '!';
     }
     twitterRestClient.statusesUpdateWithMedia(
       {
@@ -263,6 +280,11 @@ function addFrame(encoder, currGif, max) {
         if (config.DEBUG) console.log('ENCODER FINISHED!');
         encoder.finish();
 
+        var midId = '000' + Math.floor(currGif / 2);
+        knoxClient.putFile(__dirname + '/tmp/' + tempId + '/' + midId.substr(midId.length-3) + '.png', tempId + '.png', function(err, res){
+
+        });
+
         knoxClient.putFile(__dirname + '/tmp/' + gifName, gifName, function(err, res){
           history[history.length - 1]['saved'] = true;
           updateSocketHistory()
@@ -275,13 +297,13 @@ function addFrame(encoder, currGif, max) {
             removeGifFiles(tempId, gifName, path);
           }
 
-          ++nextId;
-          if (config.DEBUG) console.log('Ready data for: ' + allIds[nextId]);
-          for (var i = 0; i < sockets.length; i++) {
-            if (sockets[i].connected) {
-              sockets[i].broadcast.emit('end', {'id': allIds[nextId]});
-            }
-          }
+          
+          // if (config.DEBUG) console.log('Ready data for: ' + allIds[nextId]);
+          // for (var i = 0; i < sockets.length; i++) {
+          //   if (sockets[i].connected) {
+          //     sockets[i].broadcast.emit('end', {'id': allIds[nextId]});
+          //   }
+          // }
         });
       }
     });
@@ -300,7 +322,7 @@ app.get(/^\/([a-z]{3})$/, function(req, res) {
       if (isCallerMobile(req)) {
         getGif(req, res);
       } else {
-        return res.render('home.mustache', {id: id, run: data.runs[0], 'js': 'app'});
+        return res.render('app.mustache', {id: id, run: data.runs[0], 'js': 'app'});
       }
     } else {
       return res.render('404.mustache');
@@ -319,8 +341,22 @@ function getGif(req, res) {
   });
 }
 
+function getPng(req, res) {
+  http.get('http://plin-co.s3.amazonaws.com/' + req.params[0] + '.png', function(proxyRes) {
+    if (proxyRes.statusCode === 200) {
+      proxyRes.pipe(res);
+    } else {
+      return res.render('404.mustache');
+    }
+  });
+}
+
 app.get(/^\/([a-z]{3}).gif$/, function(req, res) {
   getGif(req, res);
+});
+
+app.get(/^\/([a-z]{3}).png$/, function(req, res) {
+  getPng(req, res);
 });
 
 app.post('/play', function(req, res) {
@@ -417,6 +453,7 @@ app.post('/next-user/', function(req, res) {
   var queueJSON = {
     'queue': queue
   }
+  serialReceived('A');
   client.set('queue', JSON.stringify(queueJSON), redis.print);
   history.push({
     'twitter': user.length ? user[0] : '',
@@ -450,6 +487,8 @@ function serialFakeTest(skip) {
 }
 
 function serialReceived(data) {
+  console.log('RAW CODE: ' + data);
+  data = data.toString().charCodeAt(0) - 65;
   if (data === 'A') {
     if (config.DEBUG) console.log('Starting record for: ' + allIds[nextId]);
     fs.mkdir('tmp/' + allIds[nextId] + '/');
@@ -464,27 +503,34 @@ function serialReceived(data) {
     if (config.DEBUG) console.log('Setting data for: ' + allIds[nextId]);
     if (serialData.length) {
       var startTime = serialData[0][0];
+      var tempId = nextId;
       for (var i = 0; i < serialData.length; i++) {
         serialData[i][0] = (serialData[i][0] - startTime) / 1000;
       }
       var dataComplete = {
         runs: [
           serialData
-        ]
+        ],
+        twitter: history[history.length - 1]['twitter'],
+        time: new Date().getTime()
       }
       client.set(allIds[nextId], JSON.stringify(dataComplete), redis.print);
       serialData = [];
       client.get('allIds', function (e, r) {
         if (r) {
           var idData = JSON.parse(r);
-          idData['last'] = allIds[nextId];
+          idData['last'] = allIds[tempId];
           client.set('allIds', JSON.stringify(idData), redis.print);
         }
       });
+      recent.unshift(allIds[tempId]);
+      recent.splice(5);
+      client.set('recent', JSON.stringify({'recent': recent}), redis.print);
+      nextId++;
     }
     isRunning = false;
   } else {
-    if (config.DEBUG) console.log('Received data for peg: ' + data);
+    if (config.DEBUG) console.log('Received data for peg: ' + pegMap[parseInt(data, 10)]);
     if (!isCalibrating) {
       if (isRunning) {
         serialData.push([new Date().getTime(), pegMap[parseInt(data, 10)]]);

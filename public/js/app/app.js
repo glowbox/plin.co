@@ -15,7 +15,7 @@ var SCREEN_WIDTH = window.innerWidth,
       SCREEN_WIDTH_HALF = SCREEN_WIDTH  / 2,
       SCREEN_HEIGHT_HALF = SCREEN_HEIGHT / 2;
 var DEBUG = false;
-var SHOW_PEGS = false;
+var SHOW_PEGS = true;
 
 var gifs = [];
 var board;
@@ -35,13 +35,7 @@ var freeMode = true;
 
 $(function() {
 
-  $(window).bind('keypress', function(e) {
-    // viz.destroy();
-    // viz = chooseViz(puckID);
-    // resizeCanvas();
-    // hasStarted = false;
-    // $.post('/play');
-  });
+  Math.seedrandom(puckID);
 
   if (live) {
     socket = io('http://localhost');
