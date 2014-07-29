@@ -22,7 +22,8 @@
         "knox": "*",
         "request": "2.26.0",
         "gifencoder": "1.0.3",
-        "png-js": "0.1.1"
+        "png-js": "0.1.1",
+        "serialport": "1.4.2"
     },
     "engines": {
       "node": "0.10.x"

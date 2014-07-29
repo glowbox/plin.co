@@ -65,14 +65,16 @@ var knoxClient = knox.createClient({
   bucket: process.env.S3_BUCKET
 });
 
-var SerialPort = require("serialport").SerialPort
-var serialPort = new SerialPort("/dev/tty.usbmodem1411", {
-  baudrate: 9600
-}, false); // this is the openImmediately flag [default is true]
+if (process.env.SERIALPORT) {
+  var SerialPort = require("serialport").SerialPort
+  var serialPort = new SerialPort(process.env.SERIALPORT, {
+    baudrate: 9600
+  }, false); // this is the openImmediately flag [default is true]
 
-serialPort.open(function () {
-  serialPort.on('data', serialReceived);
-});
+  serialPort.open(function () {
+    serialPort.on('data', serialReceived);
+  });
+}
 
 if (process.env.REDISCLOUD_URL) {
   var redis = require('redis');
