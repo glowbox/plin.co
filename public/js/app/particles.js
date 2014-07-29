@@ -172,7 +172,7 @@ Physics(function (world) {
 
   this.addParticles = function(x, y, runCurr) {
     for(var i = 0; i < 3; i++){
-      if(!this.particles[i].alive) {
+      console.log(i);
         var circ = Physics.body('circle', {
             x: x - 5,
             y: y - 20,
@@ -181,7 +181,7 @@ Physics(function (world) {
             radius: (board.pegSpacing / 10) + Math.random() * (board.pegSpacing / 10),
             mass: .0000000001,
             styles: {
-                fillStyle: 'rgb(' + Math.random() + ',' + Math.random() + ' ,' + Math.random() + ' )',
+                fillStyle: 'rgb(' + Math.floor(Math.random() * 255) + ',' + Math.floor(Math.random() * 255) + ' ,' + Math.floor(Math.random() * 255) + ' )',
                 angleIndicator: 'none'
             },
             restitution: .0
@@ -190,7 +190,6 @@ Physics(function (world) {
         });
         self.geometry.push(circ);
         this.world.add(circ);
-      }
     }
   }
 
