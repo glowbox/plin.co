@@ -324,8 +324,8 @@ function BirdsViz(board, puckID) {
   this.gifLength = 5000;
   this.framesPerSecond = 10;
 
-  var SCREEN_WIDTH = window.innerWidth,
-  SCREEN_HEIGHT = window.innerHeight,
+  var SCREEN_WIDTH = isLive ? 800 * BOARD_RATIO : window.innerWidth,
+  SCREEN_HEIGHT = isLive ? 800 : window.innerHeight,
   SCREEN_WIDTH_HALF = SCREEN_WIDTH  / 2,
   SCREEN_HEIGHT_HALF = SCREEN_HEIGHT / 2;
   
@@ -354,7 +354,7 @@ function BirdsViz(board, puckID) {
           boid.setAvoidWalls( true );
           boid.setWorldSize( 300, 600, 400 );
 
-          bird = this.birds[ i ] = new THREE.Mesh( new Bird(), new THREE.MeshBasicMaterial( { color:'#000000', side: THREE.DoubleSide } ) );
+          bird = this.birds[ i ] = new THREE.Mesh( new Bird(), new THREE.MeshBasicMaterial( { color:'#ffffff', side: THREE.DoubleSide } ) );
           bird.phase = Math.floor( Math.random() * 62.83 );
           scene.add( bird );
 
@@ -378,7 +378,7 @@ function BirdsViz(board, puckID) {
   }
 
   this.render = function() {
-    context.fillStyle = 'white';
+    context.fillStyle = 'black';
     context.fillRect(0, 0, canvas.width, canvas.height);
 
     for ( var i = 0, il = this.birds.length; i < il; i++ ) {

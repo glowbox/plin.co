@@ -1,19 +1,26 @@
 function Board(showPegs, hitFunc) {
   this.pegsHit = [];
 
+
+
   this.numPegs = 85;
   this.pegRadius = 3;
   this.BOARD_RATIO = 36/57;
-  this.pegHeight = (window.innerHeight - 50);
+
+  this.viewportHeight = isLive ? 800 : window.innerHeight;
+  this.viewportWidth = isLive ? (this.viewportHeight * this.BOARD_RATIO) : window.innerWidth;
+
+
+  this.pegHeight = (this.viewportHeight - 50);
   this.pegWidth = this.pegHeight * this.BOARD_RATIO;
-  if (window.innerWidth < this.pegWidth) {
-    this.pegWidth = (window.innerWidth - 50);
+  if (this.viewportWidth < this.pegWidth) {
+    this.pegWidth = (this.viewportWidth - 50);
     this.pegHeight = this.pegWidth / this.BOARD_RATIO;
   }
   this.pegs = [];
   this.pegSpacing = this.pegWidth / 7;
-  this.pegOffsetX = (window.innerWidth - this.pegWidth) / 2 + this.pegSpacing / 2;
-  this.pegOffsetY = (window.innerHeight - this.pegHeight) / 2;
+  this.pegOffsetX = (this.viewportWidth - this.pegWidth) / 2 + this.pegSpacing / 2;
+  this.pegOffsetY = (this.viewportHeight - this.pegHeight) / 2;
 
   this.init = function() {
     if (showPegs) {

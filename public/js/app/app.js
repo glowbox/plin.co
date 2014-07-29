@@ -10,10 +10,14 @@ var camera;
 var scene;
 var renderer;
 
-var SCREEN_WIDTH = window.innerWidth,
-      SCREEN_HEIGHT = window.innerHeight,
+var BOARD_RATIO = 36/57;
+
+var isLive = (live == 'true');
+var SCREEN_HEIGHT = isLive ? 800 : window.innerWidth,
+    SCREEN_WIDTH = isLive ? (SCREEN_HEIGHT * BOARD_RATIO) : window.innerHeight,
       SCREEN_WIDTH_HALF = SCREEN_WIDTH  / 2,
       SCREEN_HEIGHT_HALF = SCREEN_HEIGHT / 2;
+
 var DEBUG = false;
 var SHOW_PEGS = false;
 
@@ -86,8 +90,9 @@ $(function() {
   scene = new THREE.Scene();
 
   renderer = new THREE.CanvasRenderer();
-  renderer.setClearColor( 0xffffff );
+  renderer.setClearColor( 0x000000 );
   renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
+  
   document.body.appendChild( renderer.domElement );
 
   canvas = document.getElementsByTagName('canvas')[0];
@@ -102,7 +107,8 @@ $(function() {
   if (SHOW_PEGS) {
     two = new Two({
       type: Two.Types['svg'],
-      fullscreen: true
+      width:SCREEN_WIDTH,
+      height:SCREEN_HEIGHT
     }).appendTo(document.body);
 
     Two.Resolution = 10;
@@ -186,8 +192,8 @@ $(function() {
   }
 
   function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.width = isLive ? SCREEN_WIDTH : window.innerWidth;
+    canvas.height = isLive ? SCREEN_HEIGHT : window.innerHeight;
     if (viz.double) {
       canvas.width = canvas.width * ((viz.double && window.devicePixelRatio) > 1 ? 2 : 1);
       canvas.height = canvas.height * ((viz.double && window.devicePixelRatio) > 1 ? 2 : 1);
@@ -196,12 +202,79 @@ $(function() {
   
   resizeCanvas();
   animate();
+
+  $(window).bind('mousedown', function(e) {
+    
+    var mx = e.pageX;
+    var my = e.pageY;
+
+    for(var i = 0; i < 4; i++){
+      if(distanceTo(mx, my, targetPoints[i][0], targetPoints[i][1]) < 30){
+        dragging = true;
+        dragIndex = i;
+        break;
+      }
+    }
+  });
+
+  $(window).bind('mouseup', function(e) {
+      dragging = false;
+  });
+
+  $(window).bind('mousemove', function(e) {
+    if(dragging) {
+      targetPoints[dragIndex][0] = e.pageX;
+      targetPoints[dragIndex][1] = e.pageY;
+      updatePerspectiveTransform();
+    }
+  });
+
 });
 
+function distanceTo(x1, y1, x2, y2) {
+  return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+}
+
+var targetPoints = [[0, 0], [SCREEN_WIDTH, 0], [SCREEN_WIDTH, SCREEN_HEIGHT], [0, SCREEN_HEIGHT]];
+var dragging = false;
+var dragIndex = 0;
+
+function updatePerspectiveTransform() {
+  var transform = ["", "-webkit-", "-moz-", "-ms-", "-o-"].reduce(function(p, v) { return v + "transform" in document.body.style ? v : p; }) + "transform";
+  
+  var sourcePoints = [[0, 0], [SCREEN_WIDTH, 0], [SCREEN_WIDTH, SCREEN_HEIGHT], [0, SCREEN_HEIGHT]];
+    
+
+  for (var a = [], b = [], i = 0, n = sourcePoints.length; i < n; ++i) {
+    var s = sourcePoints[i], t = targetPoints[i];
+    a.push([s[0], s[1], 1, 0, 0, 0, -s[0] * t[0], -s[1] * t[0]]), b.push(t[0]);
+    a.push([0, 0, 0, s[0], s[1], 1, -s[0] * t[1], -s[1] * t[1]]), b.push(t[1]);
+  }
+
+  var X = solve(a, b, true);
+  var matrix = [
+    X[0], X[3], 0, X[6],
+    X[1], X[4], 0, X[7],
+       0,    0, 1,    0,
+    X[2], X[5], 0,    1
+  ].map(function(x) {
+    return d3.round(x, 6);
+  });
+ 
+  $(canvas).css(transform, "matrix3d(" + matrix.join(',') + ")");
+  $(canvas).css(transform + "-origin", "0px 0px 0px");
+}
+
 function onWindowResize() {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize( window.innerWidth, window.innerHeight );
+  if(isLive) {
+    camera.aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+    camera.updateProjectionMatrix();
+    renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
+  } else {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize( window.innerWidth, window.innerHeight );
+  }
 }
 
 function chooseViz(id) {
