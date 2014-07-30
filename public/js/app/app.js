@@ -184,7 +184,8 @@ $(function() {
     }
     viz.render();
 
-    // draw pegs on canvas to help alignment.
+    renderer.render( scene, camera );
+        // draw pegs on canvas to help alignment.
     if (CALIBRATE_MAPPING) {
      context.fillStyle = "white";
      context.strokeStyle = "white";
@@ -195,9 +196,6 @@ $(function() {
         context.fillRect(coords.x-2, coords.y-2, 5, 5);
      }
     }
-
-
-    renderer.render( scene, camera );
     requestAnimationFrame(animate);
   }
 
@@ -286,6 +284,14 @@ $(function() {
 
 function distanceTo(x1, y1, x2, y2) {
   return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+}
+function hexToRgb(hex) {
+  var bigint = parseInt(hex, 16);
+  var r = (bigint >> 16) & 255;
+  var g = (bigint >> 8) & 255;
+  var b = bigint & 255;
+
+  return { r: r, g: g, b: b };
 }
 
 var dragging = false;

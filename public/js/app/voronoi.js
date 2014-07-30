@@ -22,14 +22,7 @@ function VoronoiViz(board, puckID) {
 
   this.colors = [];
   
-  function hexToRgb(hex) {
-    var bigint = parseInt(hex, 16);
-    var r = (bigint >> 16) & 255;
-    var g = (bigint >> 8) & 255;
-    var b = bigint & 255;
 
-    return { r: r, g: g, b: b };
-  }
 
   var scheme = new ColorScheme;
   scheme.from_hue(Math.floor(Math.random() * 360))
@@ -39,7 +32,7 @@ function VoronoiViz(board, puckID) {
     .variation('hard')
     .web_safe(false);
   var colorValues = scheme.colors();
-  console.log(colorValues);
+  //console.log(colorValues);
   for (var i = 0; i < colorValues.length; i++) {
     var rgb = hexToRgb(colorValues[i]);
     this.colors.push([ rgb.r, rgb.g, rgb.b ]);
@@ -70,7 +63,6 @@ function VoronoiViz(board, puckID) {
       this.velocity.push([(Math.random() - 0.5)*2, (Math.random() * 0.5)*2]);
       this.centers.push([x,y]);
       var dist = distanceTo(x,y,coor.x,coor.y);
-      console.log(dist);
       var index = Math.floor(dist * 0.1);
       index = Math.max(0, Math.min(index, this.colors.length-1));
       this.fillColors.push( this.colors[index] );
