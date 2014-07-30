@@ -321,8 +321,8 @@ function BirdsViz(board, puckID) {
   this.puckID = puckID;
   this.double = true;
 
-  this.gifLength = 5000;
-  this.framesPerSecond = 10;
+  this.gifLength = 12000;
+  this.framesPerSecond = 4;
 
   var SCREEN_WIDTH = isLive ? 800 * BOARD_RATIO : window.innerWidth,
   SCREEN_HEIGHT = isLive ? 800 : window.innerHeight,

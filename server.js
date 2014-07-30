@@ -178,10 +178,10 @@ function postTweet(tempId, gifName, path) {
   if (twitterRestClient) {
     history[history.length - 1]['tweeted'] = 'progress';
     updateSocketHistory();
-    var status = 'Another round played! Check it out at http://plin.co/' + allIds[nextId] + '!';
+    var status = 'Another round played! Check it out at http://plin.co/' + allIds[nextId] + '! #cascadiajs';
     console.log(history[history.length - 1]);
     if (history[history.length - 1]['twitter'].length) {
-      status = 'Thanks for playing, @' + history[history.length - 1]['twitter'] + '. Check out your run at http://plin.co/' + allIds[nextId] + '!';
+      status = 'Thanks for playing, @' + history[history.length - 1]['twitter'] + '. Check out your run at http://plin.co/' + allIds[nextId] + '! #cascadiajs';
     }
     twitterRestClient.statusesUpdateWithMedia(
       {
@@ -479,8 +479,8 @@ function serialFakeTest(skip) {
       serialReceived('start');
     }, 1000);
   }
-  var tempPegs = [2, 3, 9, 16, 17, 23, 29, 28, 35, 36, 42, 48, 55, 54, 61];
-  // var tempPegs = [4, 3, 2, 1, 0];
+  // var tempPegs = [2, 3, 9, 16, 17, 23, 29, 28, 35, 36, 42, 48, 55, 54, 61];
+  var tempPegs = [21, 18, 13, 11, 4];
   var currPeg = 0;
   for (var i = 0; i < tempPegs.length; i++) {
     setTimeout(function() {
@@ -515,7 +515,7 @@ function serialReceived(data) {
         runs: [
           serialData
         ],
-        twitter: history[history.length - 1]['twitter'],
+        twitter: history.length ? history[history.length - 1]['twitter'] : '',
         time: new Date().getTime()
       }
       client.set(allIds[nextId], JSON.stringify(dataComplete), redis.print);

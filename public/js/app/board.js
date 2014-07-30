@@ -1,26 +1,23 @@
 function Board(showPegs, hitFunc) {
   this.pegsHit = [];
 
-
-
   this.numPegs = 85;
   this.pegRadius = 3;
-  this.BOARD_RATIO = 36/57;
-
-  this.viewportHeight = isLive ? 800 : window.innerHeight;
-  this.viewportWidth = isLive ? (this.viewportHeight * this.BOARD_RATIO) : window.innerWidth;
-
-
-  this.pegHeight = (this.viewportHeight - 50);
-  this.pegWidth = this.pegHeight * this.BOARD_RATIO;
-  if (this.viewportWidth < this.pegWidth) {
-    this.pegWidth = (this.viewportWidth - 50);
-    this.pegHeight = this.pegWidth / this.BOARD_RATIO;
-  }
+  this.BOARD_RATIO = 37/58;
+  var tempHeight = isLive ? 800 : window.innerHeight;
+  var tempWidth = isLive ? (tempHeight * this.BOARD_RATIO) : window.innerHeight;
+  this.pegHeight = tempHeight * (13*4.5*.866666 / 58);
+  this.pegWidth = tempWidth * (27 / 36);
+  console.log(this.pegWidth);
+  // if (tempWidth < this.pegWidth) {
+  //   this.pegWidth = (tempWidth - 50);
+  //   this.pegHeight = this.pegWidth / this.BOARD_RATIO;
+  // }
+  console.log(this.pegWidth);
   this.pegs = [];
-  this.pegSpacing = this.pegWidth / 7;
-  this.pegOffsetX = (this.viewportWidth - this.pegWidth) / 2 + this.pegSpacing / 2;
-  this.pegOffsetY = (this.viewportHeight - this.pegHeight) / 2;
+  this.pegSpacing = this.pegWidth / 6;
+  this.pegOffsetX = this.pegSpacing + this.pegSpacing / 18;
+  this.pegOffsetY = this.pegSpacing * .8666666 * 2;
 
   this.init = function() {
     if (showPegs) {
@@ -35,10 +32,10 @@ function Board(showPegs, hitFunc) {
       var localPin = i % 13;
       var overallWidth = 13 * this.pegSpacing;
       var x = 0;
-      var y = Math.floor(i / 13) * (this.pegSpacing * .866666667 * 2) + this.pegOffsetY + (this.pegSpacing * .8666) * 1.5;
+      var y = Math.floor(i / 13) * (this.pegSpacing * .866666667 * 2) + this.pegOffsetY;
       if (localPin <= 6) {
         var num = i;
-        if (i === 65) {
+        if (i === 65 || i === 39 || i == 78) {
           num = 0;
         }
         x = (num /13 * overallWidth) % overallWidth + this.pegOffsetX;

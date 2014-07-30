@@ -10,7 +10,7 @@ var camera;
 var scene;
 var renderer;
 
-var BOARD_RATIO = 36/57;
+var BOARD_RATIO = 37/58;
 
 var isLive = (live == 'true');
 var SCREEN_HEIGHT = isLive ? 800 : window.innerWidth,
@@ -19,7 +19,7 @@ var SCREEN_HEIGHT = isLive ? 800 : window.innerWidth,
       SCREEN_HEIGHT_HALF = SCREEN_HEIGHT / 2;
 
 var DEBUG = false;
-var SHOW_PEGS = true;
+var SHOW_PEGS = false;
 
 var gifs = [];
 var board;
@@ -152,20 +152,20 @@ $(function() {
           // tempCanvas.width = 480;
           // tempCanvas.height = Math.floor(480 * ratio);
           contexts.push(tempCanvas);
-          if (viz.double) {
-            var imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-            var data = imageData.data;
+          // if (viz.double) {
+          //   var imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+          //   var data = imageData.data;
 
-            for(var i = 0; i < data.length; i += 4) {
-              // red
-              data[i] = 255 - data[i];
-              // green
-              data[i + 1] = 255 - data[i + 1];
-              // blue
-              data[i + 2] = 255 - data[i + 2];
-            }
-            tempCtx.putImageData(imageData, 0, 0);
-          }
+          //   for(var i = 0; i < data.length; i += 4) {
+          //     // red
+          //     data[i] = 255 - data[i];
+          //     // green
+          //     data[i + 1] = 255 - data[i + 1];
+          //     // blue
+          //     data[i + 2] = 255 - data[i + 2];
+          //   }
+          //   tempCtx.putImageData(imageData, 0, 0);
+          // }
           gifs.push(0);
         }
       } else if (diffMain > viz.gifLength && gifs.length) {
