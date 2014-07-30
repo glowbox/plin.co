@@ -76,29 +76,29 @@ Physics(function (world) {
       world.add(ball);
       pinConstraints.add(ball, ball.state.pos);
 
-      if (i < 7) {
-        var baffle = Physics.body('rectangle', {
-            x: coors.x,
-            y: window.innerHeight - (board.pegSpacing * .8) / 2,
-            width: board.pegSpacing / 6,
-            height: (board.pegSpacing * .8),
-            mass: 10000000000,
-            styles: {
-                fillStyle: '#999999',
-                angleIndicator: 'none'
-            },
-            hidden: self.hideGeometry,
-            fixed: true,
-            cof: 0,
-            restitution: .8
+      // if (i < 7) {
+      //   var baffle = Physics.body('rectangle', {
+      //       x: coors.x,
+      //       y: window.innerHeight - (board.pegSpacing * .8) / 2,
+      //       width: board.pegSpacing / 6,
+      //       height: (board.pegSpacing * .8),
+      //       mass: 10000000000,
+      //       styles: {
+      //           fillStyle: '#999999',
+      //           angleIndicator: 'none'
+      //       },
+      //       hidden: self.hideGeometry,
+      //       fixed: true,
+      //       cof: 0,
+      //       restitution: .8
 
-            // restitution: 0.9
-        });
-        self.geometry.push(baffle);
-        world.add(baffle);
-        self.baffle.push(baffle);
-        pinConstraints.add(baffle, baffle.state.pos);
-      }
+      //       // restitution: 0.9
+      //   });
+      //   self.geometry.push(baffle);
+      //   world.add(baffle);
+      //   self.baffle.push(baffle);
+      //   pinConstraints.add(baffle, baffle.state.pos);
+      // }
 
       if (i % 13 === 7) {
         for (var j = 0; j < 2; j++) {

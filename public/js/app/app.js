@@ -12,14 +12,14 @@ var renderer;
 
 var BOARD_RATIO = 36/57;
 
-var isLive = (live == 'true');
+
 var SCREEN_HEIGHT = isLive ? 800 : window.innerWidth,
     SCREEN_WIDTH = isLive ? (SCREEN_HEIGHT * BOARD_RATIO) : window.innerHeight,
       SCREEN_WIDTH_HALF = SCREEN_WIDTH  / 2,
       SCREEN_HEIGHT_HALF = SCREEN_HEIGHT / 2;
 
 var DEBUG = false;
-var SHOW_PEGS = true;
+var SHOW_PEGS = false;
 
 var gifs = [];
 var board;
@@ -86,7 +86,7 @@ $(function() {
   renderer = new THREE.CanvasRenderer();
   renderer.setClearColor( 0x000000 );
   renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
-  
+  //console.log(SCREEN_WIDTH, SCREEN_HEIGHT);
   document.body.appendChild( renderer.domElement );
 
   canvas = document.getElementsByTagName('canvas')[0];
@@ -181,6 +181,15 @@ $(function() {
       }
     }
     viz.render();
+
+    // draw pegs on canvas.
+    // context.fillStyle = "white";
+    // for(var i = 0; i < board.numPegs; i++){
+    //   var coords = board.getPinCoordinates(i);
+    //     context.fillRect(coords.x-2, coords.y-2, 5, 5);
+    // }
+
+
     renderer.render( scene, camera );
     requestAnimationFrame(animate);
   }
@@ -188,7 +197,7 @@ $(function() {
   function resizeCanvas() {
     canvas.width = isLive ? SCREEN_WIDTH : window.innerWidth;
     canvas.height = isLive ? SCREEN_HEIGHT : window.innerHeight;
-    if (viz.double) {
+    if (viz.double && !isLive) {
       canvas.width = canvas.width * ((viz.double && window.devicePixelRatio) > 1 ? 2 : 1);
       canvas.height = canvas.height * ((viz.double && window.devicePixelRatio) > 1 ? 2 : 1);
     }
@@ -212,7 +221,10 @@ $(function() {
   });
 
   $(window).bind('mouseup', function(e) {
-      dragging = false;
+    if(dragging){
+      console.log(JSON.stringify(targetPoints));
+    }
+    dragging = false;
   });
 
   $(window).bind('mousemove', function(e) {
@@ -222,14 +234,14 @@ $(function() {
       updatePerspectiveTransform();
     }
   });
-
+  updatePerspectiveTransform();
 });
 
 function distanceTo(x1, y1, x2, y2) {
   return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 }
 
-var targetPoints = [[0, 0], [SCREEN_WIDTH, 0], [SCREEN_WIDTH, SCREEN_HEIGHT], [0, SCREEN_HEIGHT]];
+var targetPoints = [[547,137],[933,142],[903,761],[523,745]]; //[[0, 0], [SCREEN_WIDTH, 0], [SCREEN_WIDTH, SCREEN_HEIGHT], [0, SCREEN_HEIGHT]];
 var dragging = false;
 var dragIndex = 0;
 

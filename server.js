@@ -65,14 +65,23 @@ var knoxClient = knox.createClient({
   bucket: process.env.S3_BUCKET
 });
 
-if (process.env.SERIALPORT) {
-  var SerialPort = require("serialport").SerialPort
-  var serialPort = new SerialPort(process.env.SERIALPORT, {
+if (process.env.SERIALPORT1) {
+  var SerialPort = require("serialport").SerialPort;
+  
+  var serialPort1 = new SerialPort(process.env.SERIALPORT1, {
     baudrate: 9600
-  }, false); // this is the openImmediately flag [default is true]
+  }, false);
 
-  serialPort.open(function () {
-    serialPort.on('data', serialReceived);
+  serialPort1.open(function () {
+    serialPort1.on('data', serialReceived);
+  });
+
+  var serialPort2 = new SerialPort(process.env.SERIALPORT2, {
+    baudrate: 9600
+  }, false);
+
+  serialPort2.open(function () {
+    serialPort2.on('data', serialReceived);
   });
 }
 
@@ -489,10 +498,17 @@ function serialFakeTest(skip) {
   }
 }
 
-function serialReceived(data) {
+function serialReceived(data){
+  var codes = data.toString();
+  for(var i = 0; i < codes.length; i++){
+    handPinCode(codes[i]);
+  }
+}
+
+function handPinCode(data) {
   console.log('RAW CODE: ' + data);
   var raw = data;
-  data = data.toString().charCodeAt(0) - 65;
+  data = data.toString().charCodeAt(0) - 32;
   if (raw === 'start') {
     if (config.DEBUG) console.log('Starting record for: ' + allIds[nextId]);
     fs.mkdir('tmp/' + allIds[nextId] + '/');
