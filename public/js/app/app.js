@@ -13,13 +13,14 @@ var renderer;
 var BOARD_RATIO = 36/57;
 
 
-var SCREEN_HEIGHT = isLive ? 800 : window.innerWidth,
+var SCREEN_HEIGHT = isLive ? 1200 : window.innerWidth,
     SCREEN_WIDTH = isLive ? (SCREEN_HEIGHT * BOARD_RATIO) : window.innerHeight,
       SCREEN_WIDTH_HALF = SCREEN_WIDTH  / 2,
       SCREEN_HEIGHT_HALF = SCREEN_HEIGHT / 2;
 
 var DEBUG = false;
 var SHOW_PEGS = false;
+var CALIBRATE_MAPPING = false;
 
 var gifs = [];
 var board;
@@ -36,6 +37,7 @@ var runIds = [];
 
 var freeMode = true;
 
+var mousePosition = {x:0,y:0};
 
 $(function() {
 
@@ -182,12 +184,17 @@ $(function() {
     }
     viz.render();
 
-    // draw pegs on canvas.
-    // context.fillStyle = "white";
-    // for(var i = 0; i < board.numPegs; i++){
-    //   var coords = board.getPinCoordinates(i);
-    //     context.fillRect(coords.x-2, coords.y-2, 5, 5);
-    // }
+    // draw pegs on canvas to help alignment.
+    if (CALIBRATE_MAPPING) {
+     context.fillStyle = "white";
+     context.strokeStyle = "white";
+     context.strokeRect(0,0,canvas.width,canvas.height);
+     context.strokeRect(1,1,canvas.width-2,canvas.height-2);
+     for(var i = 0; i < board.numPegs; i++){
+       var coords = board.getPinCoordinates(i);
+        context.fillRect(coords.x-2, coords.y-2, 5, 5);
+     }
+    }
 
 
     renderer.render( scene, camera );
@@ -206,33 +213,73 @@ $(function() {
   resizeCanvas();
   animate();
 
+  $(window).bind('keydown', function(e) {
+    if (e.keyCode === 32) {
+      if(CALIBRATE_MAPPING){
+        $.post('/set-projection-points/', {'targetPoints': JSON.stringify(targetPoints)});
+      }
+      CALIBRATE_MAPPING = !CALIBRATE_MAPPING;
+    }
+    if(CALIBRATE_MAPPING){
+      var index = -1;
+      switch(e.keyCode) {
+        case 49: // 1
+          index = 0;
+        break;
+        
+        case 50: // 2
+         index = 1;
+        break;
+        
+        case 81: // q
+          index = 3;
+        break;
+        
+        case 87: // w
+          index = 2;
+        break;
+
+        default:
+          console.log(e.keyCode);
+      }
+      if(index !== -1) {
+        targetPoints[index][0] = mousePosition.x;
+        targetPoints[index][1] = mousePosition.y;
+        updatePerspectiveTransform();
+      }
+    }
+  });
+
   $(window).bind('mousedown', function(e) {
     
-    var mx = e.pageX;
-    var my = e.pageY;
+    if(CALIBRATE_MAPPING){
+      var mx = e.pageX;
+      var my = e.pageY;
 
-    for(var i = 0; i < 4; i++){
-      if(distanceTo(mx, my, targetPoints[i][0], targetPoints[i][1]) < 30){
-        dragging = true;
-        dragIndex = i;
-        break;
+      for(var i = 0; i < 4; i++){
+        if(distanceTo(mx, my, targetPoints[i][0], targetPoints[i][1]) < 60){
+          dragging = true;
+          dragIndex = i;
+          break;
+        }
       }
     }
   });
 
   $(window).bind('mouseup', function(e) {
     if(dragging){
-      console.log(JSON.stringify(targetPoints));
     }
     dragging = false;
   });
 
   $(window).bind('mousemove', function(e) {
-    if(dragging) {
+    if(dragging && CALIBRATE_MAPPING) {
       targetPoints[dragIndex][0] = e.pageX;
       targetPoints[dragIndex][1] = e.pageY;
       updatePerspectiveTransform();
     }
+    mousePosition.x = e.pageX;
+    mousePosition.y = e.pageY;
   });
   updatePerspectiveTransform();
 });
@@ -241,7 +288,6 @@ function distanceTo(x1, y1, x2, y2) {
   return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 }
 
-var targetPoints = [[547,137],[933,142],[903,761],[523,745]]; //[[0, 0], [SCREEN_WIDTH, 0], [SCREEN_WIDTH, SCREEN_HEIGHT], [0, SCREEN_HEIGHT]];
 var dragging = false;
 var dragIndex = 0;
 

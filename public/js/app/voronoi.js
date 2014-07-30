@@ -40,7 +40,7 @@ function VoronoiViz(board, puckID) {
     var deltaX = (coor.x - this.lastHit.x);
     var deltaY = (coor.y - this.lastHit.y);
 
-    var count = Math.random() * 9 + 5;
+    var count = Math.random() * 10 + 8;
     for(var i = 0; i < count; i++){ 
       var x = (Math.random() * deltaX) + this.lastHit.x + (Math.random() * 10 - 5);
       var y = (Math.random() * deltaY) + this.lastHit.y + (Math.random() * 10 - 5);

@@ -56,6 +56,7 @@ var nextId;
 var serialData = [];
 var isRunning = false;
 var pegMap = {};
+var projectionTargetPoints = "[[0,0],[505,0],[505,800],[0,800]]";
 var isCalibrating = false;
 var currCalibrationPin = -1;
 
@@ -67,7 +68,7 @@ var knoxClient = knox.createClient({
 
 if (process.env.SERIALPORT1) {
   var SerialPort = require("serialport").SerialPort;
-  
+
   var serialPort1 = new SerialPort(process.env.SERIALPORT1, {
     baudrate: 9600
   }, false);
@@ -96,6 +97,12 @@ if (process.env.REDISCLOUD_URL) {
     if (r) {
       var data = JSON.parse(r);
       pegMap = data['map'];
+    }
+  });
+
+  client.get('projectionTargetPoints', function (e, r) {
+    if (r) {
+      projectionTargetPoints = r;
     }
   });
   // var m = {};
@@ -161,11 +168,11 @@ app.get('/', function(req, res){
 
 app.get('/live/test/', function(req, res){
   serialFakeTest();
-  return res.render('app.mustache', {'live': true, 'id': allIds[nextId], 'js': 'app'});
+  return res.render('app.mustache', {'projectionTargetPoints' : projectionTargetPoints, 'live': true, 'id': allIds[nextId], 'js': 'app'});
 });
 
 app.get('/live/', function(req, res){
-  return res.render('app.mustache', {'live': true, 'js': 'app'});
+  return res.render('app.mustache', {'projectionTargetPoints' : projectionTargetPoints, 'live': true, 'js': 'app'});
 });
 
 function isCallerMobile(req) {
@@ -375,6 +382,13 @@ app.post('/play', function(req, res) {
   serialFakeTest(req.body.skip);
   return res.send('success!');
 });
+
+app.post('/set-projection-points/', function(req, res) {
+  var targets = req.body.targetPoints;
+  projectionTargetPoints = targets;
+  client.set('projectionTargetPoints', targets);
+  return res.send('success!');
+})
 
 app.post('/end-run/', function(req, res) {
   serialReceived('stop');
