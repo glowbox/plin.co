@@ -340,7 +340,7 @@ function BirdsViz(board, puckID) {
       canvas.className = 'invert';
       var z = Math.random() * 400 - 200;
       z = 0;
-      var startPoint = new THREE.Vector3( 0, -200, z);
+      var startPoint = new THREE.Vector3( 0, 0, z);
       for ( var i = 0; i < 300; i ++ ) {
 
           boid = this.boids[ i ] = new Boid();
@@ -405,8 +405,9 @@ function BirdsViz(board, puckID) {
 
   this.hit = function(runCurr, index) {
     var coor = board.getPinCoordinates(index);
-    var vector = new THREE.Vector3( coor.x - SCREEN_WIDTH_HALF, - coor.y + SCREEN_HEIGHT_HALF, 600);
+    var vector = new THREE.Vector3( coor.x * (1 / window.devicePixelRatio) - SCREEN_WIDTH_HALF, - coor.y * (1 / window.devicePixelRatio) + SCREEN_HEIGHT_HALF, 0);
     this.locations.push(vector);
+    console.log(SCREEN_HEIGHT_HALF, coor, vector);
     for ( var i = 0, il = self.boids.length; i < il; i++ ) {
         boid = self.boids[ i ];
         vector.z = boid.position.z;
