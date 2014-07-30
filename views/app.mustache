@@ -3,6 +3,8 @@
   var puckID = '{{id}}';
   var runStatsRaw = '{{run}}';
   var live = '{{live}}';
+  var isLive = (live == 'true');
+  var targetPoints = {{projectionTargetPoints}};
   var runStats = [];
   if (runStatsRaw) {
     var splits = runStatsRaw.split(',')

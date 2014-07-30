@@ -56,6 +56,7 @@ var nextId;
 var serialData = [];
 var isRunning = false;
 var pegMap = {};
+var projectionTargetPoints = "[[0,0],[505,0],[505,800],[0,800]]";
 var isCalibrating = false;
 var currCalibrationPin = -1;
 
@@ -65,14 +66,23 @@ var knoxClient = knox.createClient({
   bucket: process.env.S3_BUCKET
 });
 
-if (process.env.SERIALPORT) {
-  var SerialPort = require("serialport").SerialPort
-  var serialPort = new SerialPort(process.env.SERIALPORT, {
-    baudrate: 9600
-  }, false); // this is the openImmediately flag [default is true]
+if (process.env.SERIALPORT1) {
+  var SerialPort = require("serialport").SerialPort;
 
-  serialPort.open(function () {
-    serialPort.on('data', serialReceived);
+  var serialPort1 = new SerialPort(process.env.SERIALPORT1, {
+    baudrate: 9600
+  }, false);
+
+  serialPort1.open(function () {
+    serialPort1.on('data', serialReceived);
+  });
+
+  var serialPort2 = new SerialPort(process.env.SERIALPORT2, {
+    baudrate: 9600
+  }, false);
+
+  serialPort2.open(function () {
+    serialPort2.on('data', serialReceived);
   });
 }
 
@@ -87,6 +97,12 @@ if (process.env.REDISCLOUD_URL) {
     if (r) {
       var data = JSON.parse(r);
       pegMap = data['map'];
+    }
+  });
+
+  client.get('projectionTargetPoints', function (e, r) {
+    if (r) {
+      projectionTargetPoints = r;
     }
   });
   // var m = {};
@@ -152,11 +168,11 @@ app.get('/', function(req, res){
 
 app.get('/live/test/', function(req, res){
   serialFakeTest();
-  return res.render('app.mustache', {'live': true, 'id': allIds[nextId], 'js': 'app'});
+  return res.render('app.mustache', {'projectionTargetPoints' : projectionTargetPoints, 'live': true, 'id': allIds[nextId], 'js': 'app'});
 });
 
 app.get('/live/', function(req, res){
-  return res.render('app.mustache', {'live': true, 'js': 'app'});
+  return res.render('app.mustache', {'projectionTargetPoints' : projectionTargetPoints, 'live': true, 'js': 'app'});
 });
 
 function isCallerMobile(req) {
@@ -367,6 +383,13 @@ app.post('/play', function(req, res) {
   return res.send('success!');
 });
 
+app.post('/set-projection-points/', function(req, res) {
+  var targets = req.body.targetPoints;
+  projectionTargetPoints = targets;
+  client.set('projectionTargetPoints', targets);
+  return res.send('success!');
+})
+
 app.post('/end-run/', function(req, res) {
   serialReceived('stop');
   history[history.length - 1]['complete'] = true;
@@ -489,10 +512,17 @@ function serialFakeTest(skip) {
   }
 }
 
-function serialReceived(data) {
+function serialReceived(data){
+  var codes = data.toString();
+  for(var i = 0; i < codes.length; i++){
+    handPinCode(codes[i]);
+  }
+}
+
+function handPinCode(data) {
   console.log('RAW CODE: ' + data);
   var raw = data;
-  data = data.toString().charCodeAt(0) - 65;
+  data = data.toString().charCodeAt(0) - 32;
   if (raw === 'start') {
     if (config.DEBUG) console.log('Starting record for: ' + allIds[nextId]);
     fs.mkdir('tmp/' + allIds[nextId] + '/');

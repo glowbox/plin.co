@@ -20,7 +20,8 @@ function VoronoiViz(board, puckID) {
 
   this.colors = [];
   for (var i = 0; i < 9; i++) {
-    this.colors.push('rgb(' + Math.floor(Math.random() * 255) + ',' + Math.floor(Math.random() * 255) + ' ,' + Math.floor(Math.random() * 255) + ' )');
+    //this.colors.push('rgb(' + Math.floor(Math.random() * 255) + ',' + Math.floor(Math.random() * 255) + ' ,' + Math.floor(Math.random() * 255) + ' )');
+    this.colors.push([ Math.floor(Math.random() * 255) , Math.floor(Math.random() * 255) , Math.floor(Math.random() * 255) ]);
   }
   
   for(var i = 0; i < board.pegs.length; i++){
@@ -39,9 +40,10 @@ function VoronoiViz(board, puckID) {
     var deltaX = (coor.x - this.lastHit.x);
     var deltaY = (coor.y - this.lastHit.y);
 
-    for(var i = 0; i < Math.random() * 5 + 3; i++){ 
-      var x = (Math.random() * deltaX) + this.lastHit.x + (Math.random() * 20 - 10);
-      var y = (Math.random() * deltaY) + this.lastHit.y + (Math.random() * 20 - 10);
+    var count = Math.random() * 10 + 8;
+    for(var i = 0; i < count; i++){ 
+      var x = (Math.random() * deltaX) + this.lastHit.x + (Math.random() * 10 - 5);
+      var y = (Math.random() * deltaY) + this.lastHit.y + (Math.random() * 10 - 5);
       this.points.push([x,y]);
       this.velocity.push([(Math.random() - 0.5)*2, (Math.random() * 0.5)*2]);
       this.centers.push([x,y]);
@@ -74,21 +76,24 @@ function VoronoiViz(board, puckID) {
         if (i % l === k && draw(this.voronoiData[i])) {
           var refreshStyle = false;
           if (i < this.board.numPegs) {
-            context.globalAlpha = 1;
+            //context.globalAlpha = 1;
             context.fillStyle = 'black';
             refreshStyle = true;
           } else {
             var fade = 1 - (distanceTo(this.points[i][0], this.points[i][1], this.centers[i][0], this.centers[i][1]) * 0.05);
+            fade = Math.min(1,Math.max(0,fade));
+            //console.log(fade);
             context.fillStyle = "rgba(" + this.colors[k][0] + ", " + this.colors[k][1] + ", " + this.colors[k][2] + ", " + fade + ")";
            // context.globalAlpha = ;
           }
           context.fill();
           if (refreshStyle) {
 
-            context.fillStyle = this.colors[k];
+          //  context.fillStyle = this.colors[k];
           }
         }
       }
+
     }
 
     
