@@ -11,17 +11,38 @@ function VoronoiViz(board, puckID) {
   this.isFirst = true;
 
   this.voronoiData = null;
+
   this.points = [];
   this.centers = [];
   this.velocity = [];
+  this.fillColors = [];
 
   this.voronoi = d3.geom.voronoi()
     .clipExtent([[0, 0], [1500, 1500]]);
 
   this.colors = [];
-  for (var i = 0; i < 9; i++) {
-    //this.colors.push('rgb(' + Math.floor(Math.random() * 255) + ',' + Math.floor(Math.random() * 255) + ' ,' + Math.floor(Math.random() * 255) + ' )');
-    this.colors.push([ Math.floor(Math.random() * 255) , Math.floor(Math.random() * 255) , Math.floor(Math.random() * 255) ]);
+  
+  function hexToRgb(hex) {
+    var bigint = parseInt(hex, 16);
+    var r = (bigint >> 16) & 255;
+    var g = (bigint >> 8) & 255;
+    var b = bigint & 255;
+
+    return { r: r, g: g, b: b };
+  }
+
+  var scheme = new ColorScheme;
+  scheme.from_hue(Math.floor(Math.random() * 360))
+    .scheme('triade')
+    .distance(0.1)
+    .add_complement(false)
+    .variation('hard')
+    .web_safe(false);
+  var colorValues = scheme.colors();
+  console.log(colorValues);
+  for (var i = 0; i < colorValues.length; i++) {
+    var rgb = hexToRgb(colorValues[i]);
+    this.colors.push([ rgb.r, rgb.g, rgb.b ]);
   }
   
   for(var i = 0; i < board.pegs.length; i++){
@@ -29,6 +50,7 @@ function VoronoiViz(board, puckID) {
     this.points.push( [coords.x, coords.y] );
     this.centers.push( [coords.x, coords.y] );
     this.velocity.push( [0,0] );
+    this.fillColors.push( [0,0,0] );
   }
   this.lastHit = {x:this.points[0][0], y:this.points[0][1]}
 
@@ -47,6 +69,11 @@ function VoronoiViz(board, puckID) {
       this.points.push([x,y]);
       this.velocity.push([(Math.random() - 0.5)*2, (Math.random() * 0.5)*2]);
       this.centers.push([x,y]);
+      var dist = distanceTo(x,y,coor.x,coor.y);
+      console.log(dist);
+      var index = Math.floor(dist * 0.1);
+      index = Math.max(0, Math.min(index, this.colors.length-1));
+      this.fillColors.push( this.colors[index] );
     }
     this.updateVoronoi();
 
@@ -80,11 +107,10 @@ function VoronoiViz(board, puckID) {
             context.fillStyle = 'black';
             refreshStyle = true;
           } else {
-            var fade = 1 - (distanceTo(this.points[i][0], this.points[i][1], this.centers[i][0], this.centers[i][1]) * 0.05);
+            var fade = 1 - (distanceTo(this.points[i][0], this.points[i][1], this.centers[i][0], this.centers[i][1]) * 0.035);
             fade = Math.min(1,Math.max(0,fade));
             //console.log(fade);
-            context.fillStyle = "rgba(" + this.colors[k][0] + ", " + this.colors[k][1] + ", " + this.colors[k][2] + ", " + fade + ")";
-           // context.globalAlpha = ;
+            context.fillStyle = "rgba(" + this.fillColors[i][0] + ", " + this.fillColors[i][1] + ", " + this.fillColors[i][2] + ", " + fade + ")";
           }
           context.fill();
           if (refreshStyle) {

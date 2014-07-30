@@ -13,7 +13,7 @@ var renderer;
 var BOARD_RATIO = 36/57;
 
 
-var SCREEN_HEIGHT = isLive ? 1200 : window.innerWidth,
+var SCREEN_HEIGHT = isLive ? 800 : window.innerWidth,
     SCREEN_WIDTH = isLive ? (SCREEN_HEIGHT * BOARD_RATIO) : window.innerHeight,
       SCREEN_WIDTH_HALF = SCREEN_WIDTH  / 2,
       SCREEN_HEIGHT_HALF = SCREEN_HEIGHT / 2;
