@@ -8,12 +8,12 @@ function Board(showPegs, hitFunc) {
   var tempWidth = isLive ? (tempHeight * this.BOARD_RATIO) : window.innerHeight;
   this.pegHeight = tempHeight * (13*4.5*.866666 / 58);
   this.pegWidth = tempWidth * (27 / 36);
-  console.log(this.pegWidth);
+  // console.log(this.pegWidth);
   // if (tempWidth < this.pegWidth) {
   //   this.pegWidth = (tempWidth - 50);
   //   this.pegHeight = this.pegWidth / this.BOARD_RATIO;
   // }
-  console.log(this.pegWidth);
+  // console.log(this.pegWidth);
   this.pegs = [];
   this.pegSpacing = this.pegWidth / 6;
   this.pegOffsetX = this.pegSpacing + this.pegSpacing / 18;

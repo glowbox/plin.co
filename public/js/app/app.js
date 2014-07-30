@@ -13,13 +13,13 @@ var renderer;
 var BOARD_RATIO = 37/58;
 
 
-var SCREEN_HEIGHT = isLive ? 1200 : window.innerWidth,
+var SCREEN_HEIGHT = isLive ? 800 : window.innerWidth,
     SCREEN_WIDTH = isLive ? (SCREEN_HEIGHT * BOARD_RATIO) : window.innerHeight,
       SCREEN_WIDTH_HALF = SCREEN_WIDTH  / 2,
       SCREEN_HEIGHT_HALF = SCREEN_HEIGHT / 2;
 
 var DEBUG = false;
-var SHOW_PEGS = false;
+var SHOW_PEGS = true;
 var CALIBRATE_MAPPING = false;
 
 var gifs = [];
@@ -281,7 +281,7 @@ $(function() {
     mousePosition.x = e.pageX;
     mousePosition.y = e.pageY;
   });
-  updatePerspectiveTransform();
+  // updatePerspectiveTransform();
 });
 
 function distanceTo(x1, y1, x2, y2) {
