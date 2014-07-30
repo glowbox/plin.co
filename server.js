@@ -38,7 +38,7 @@ io.on('connection', function(socket){
 
 var twitter = require('node-twitter');
 var twitterRestClient;
-if (process.env.TWITTER_CONSUMER_KEY) {
+if (process.env.TWITTER_CONSUMER_KEY && !process.env.OFFLINE) {
   twitterRestClient = new twitter.RestClient(
     process.env.TWITTER_CONSUMER_KEY,
     process.env.TWITTER_CONSUMER_TOKEN,
@@ -51,8 +51,8 @@ var queue = [];
 var history = [];
 var recent = [];
 var images = {};
-var allIds = [];
-var nextId;
+var allIds = ['2'];
+var nextId = 0;
 var serialData = [];
 var isRunning = false;
 var pegMap = {};
@@ -60,11 +60,18 @@ var projectionTargetPoints = "[[0,0],[505,0],[505,800],[0,800]]";
 var isCalibrating = false;
 var currCalibrationPin = -1;
 
-var knoxClient = knox.createClient({
-  key: process.env.AWS_ACCESS_KEY_ID,
-  secret: process.env.AWS_SECRET_ACCESS_KEY,
-  bucket: process.env.S3_BUCKET
-});
+var knoxClient;
+if (!process.env.OFFLINE) {
+  knoxClient = knox.createClient({
+    key: process.env.AWS_ACCESS_KEY_ID,
+    secret: process.env.AWS_SECRET_ACCESS_KEY,
+    bucket: process.env.S3_BUCKET
+  });
+} else {
+  for (var i = 0; i < 85; i++) {
+    pegMap[i.toString()] = i;
+  }
+}
 
 if (process.env.SERIALPORT1) {
   var SerialPort = require("serialport").SerialPort;
@@ -86,7 +93,7 @@ if (process.env.SERIALPORT1) {
   });
 }
 
-if (process.env.REDISCLOUD_URL) {
+if (process.env.REDISCLOUD_URL && !process.env.OFFLINE) {
   var redis = require('redis');
   var url = require('url');
   var redisURL = url.parse(process.env.REDISCLOUD_URL);
@@ -299,30 +306,32 @@ function addFrame(encoder, currGif, max) {
         encoder.finish();
 
         var midId = '000' + Math.floor(currGif / 2);
-        knoxClient.putFile(__dirname + '/tmp/' + tempId + '/' + midId.substr(midId.length-3) + '.png', tempId + '.png', function(err, res){
+        if (knoxClient) {
+          knoxClient.putFile(__dirname + '/tmp/' + tempId + '/' + midId.substr(midId.length-3) + '.png', tempId + '.png', function(err, res){
 
-        });
+          });
 
-        knoxClient.putFile(__dirname + '/tmp/' + gifName, gifName, function(err, res){
-          history[history.length - 1]['saved'] = true;
-          updateSocketHistory()
+          knoxClient.putFile(__dirname + '/tmp/' + gifName, gifName, function(err, res){
+            history[history.length - 1]['saved'] = true;
+            updateSocketHistory()
 
-          if (config.DEBUG) console.log('FILE PLACED');
+            if (config.DEBUG) console.log('FILE PLACED');
 
-          if (config.POST_TWEET) {
-            postTweet(tempId, gifName, path)
-          } else {
-            removeGifFiles(tempId, gifName, path);
-          }
+            if (config.POST_TWEET) {
+              postTweet(tempId, gifName, path)
+            } else {
+              removeGifFiles(tempId, gifName, path);
+            }
 
-          
-          // if (config.DEBUG) console.log('Ready data for: ' + allIds[nextId]);
-          // for (var i = 0; i < sockets.length; i++) {
-          //   if (sockets[i].connected) {
-          //     sockets[i].broadcast.emit('end', {'id': allIds[nextId]});
-          //   }
-          // }
-        });
+            
+            // if (config.DEBUG) console.log('Ready data for: ' + allIds[nextId]);
+            // for (var i = 0; i < sockets.length; i++) {
+            //   if (sockets[i].connected) {
+            //     sockets[i].broadcast.emit('end', {'id': allIds[nextId]});
+            //   }
+            // }
+          });
+        }
       }
     });
   } catch(e) {
@@ -334,18 +343,22 @@ function addFrame(encoder, currGif, max) {
 
 app.get(/^\/([a-z]{3})$/, function(req, res) {
   var id = req.params[0];
-  client.get(id, function (e, r) {
-    if (r) {
-      var data = JSON.parse(r);
-      if (isCallerMobile(req)) {
-        getGif(req, res);
+  if (client) {
+    client.get(id, function (e, r) {
+      if (r) {
+        var data = JSON.parse(r);
+        if (isCallerMobile(req)) {
+          getGif(req, res);
+        } else {
+          return res.render('app.mustache', {id: id, run: data.runs[0], 'js': 'app'});
+        }
       } else {
-        return res.render('app.mustache', {id: id, run: data.runs[0], 'js': 'app'});
+        return res.render('404.mustache');
       }
-    } else {
-      return res.render('404.mustache');
-    }
-  });
+    });
+  } else {
+    return res.render('app.mustache', {id: '1', run: [[0, 1], [.3, 2], [.6, 3]], 'js': 'app'});
+  }
   // return res.render('home.mustache', {id: req.params[0]});
 });
 
@@ -378,7 +391,6 @@ app.get(/^\/([a-z]{3}).png$/, function(req, res) {
 });
 
 app.post('/play', function(req, res) {
-  console.log('a');
   serialFakeTest(req.body.skip);
   return res.send('success!');
 });
@@ -386,7 +398,9 @@ app.post('/play', function(req, res) {
 app.post('/set-projection-points/', function(req, res) {
   var targets = req.body.targetPoints;
   projectionTargetPoints = targets;
-  client.set('projectionTargetPoints', targets);
+  if (client) {
+    client.set('projectionTargetPoints', targets);
+  }
   return res.send('success!');
 })
 
@@ -448,7 +462,9 @@ app.post('/add-user/', function(req, res) {
   var queueJSON = {
     'queue': queue
   }
-  client.set('queue', JSON.stringify(queueJSON), redis.print);
+  if (client) {
+    client.set('queue', JSON.stringify(queueJSON), redis.print);
+  }
   for (var i = 0; i < sockets.length; i++) {
     if (sockets[i].connected) {
       sockets[i].broadcast.emit('queue', queueJSON);
@@ -464,7 +480,9 @@ app.post('/remove-user/', function(req, res) {
   var queueJSON = {
     'queue': queue
   }
-  client.set('queue', JSON.stringify(queueJSON), redis.print);
+  if (client) {
+    client.set('queue', JSON.stringify(queueJSON), redis.print);
+  }
   for (var i = 0; i < sockets.length; i++) {
     if (sockets[i].connected) {
       sockets[i].broadcast.emit('queue', {'queue': queue});
@@ -480,7 +498,9 @@ app.post('/next-user/', function(req, res) {
     'queue': queue
   }
   serialReceived('start');
-  client.set('queue', JSON.stringify(queueJSON), redis.print);
+  if (client) {
+    client.set('queue', JSON.stringify(queueJSON), redis.print);
+  }
   history.push({
     'twitter': user.length ? user[0] : '',
     'id': allIds[nextId],
@@ -514,8 +534,12 @@ function serialFakeTest(skip) {
 
 function serialReceived(data){
   var codes = data.toString();
-  for(var i = 0; i < codes.length; i++){
-    handPinCode(codes[i]);
+  if (codes == 'start' || codes == 'stop') {
+    handPinCode(codes);
+  } else {
+    for(var i = 0; i < codes.length; i++){
+      handPinCode(codes[i]);
+    }
   }
 }
 
@@ -523,6 +547,7 @@ function handPinCode(data) {
   console.log('RAW CODE: ' + data);
   var raw = data;
   data = data.toString().charCodeAt(0) - 32;
+  console.log(data);
   if (raw === 'start') {
     if (config.DEBUG) console.log('Starting record for: ' + allIds[nextId]);
     fs.mkdir('tmp/' + allIds[nextId] + '/');
@@ -548,7 +573,9 @@ function handPinCode(data) {
         twitter: history.length ? history[history.length - 1]['twitter'] : '',
         time: new Date().getTime()
       }
-      client.set(allIds[nextId], JSON.stringify(dataComplete), redis.print);
+      if (client) {
+        client.set(allIds[nextId], JSON.stringify(dataComplete), redis.print);
+      }
       serialData = [];
       client.get('allIds', function (e, r) {
         if (r) {
@@ -559,7 +586,9 @@ function handPinCode(data) {
       });
       recent.unshift(allIds[tempId]);
       recent.splice(5);
-      client.set('recent', JSON.stringify({'recent': recent}), redis.print);
+      if (client) {
+        client.set('recent', JSON.stringify({'recent': recent}), redis.print);
+      }
       nextId++;
     }
     isRunning = false;
@@ -577,7 +606,9 @@ function handPinCode(data) {
       }
     } else {
       pegMap[parseInt(data, 10)] = parseInt(currCalibrationPin, 10);
-      client.set('pegMap', JSON.stringify({'map': pegMap}));
+      if (client) {
+        client.set('pegMap', JSON.stringify({'map': pegMap}));
+      }
       console.log(pegMap);
       for (var i = 0; i < sockets.length; i++) {
         if (sockets[i].connected) {

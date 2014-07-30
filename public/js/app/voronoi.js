@@ -4,7 +4,7 @@ function VoronoiViz(board, puckID) {
   this.board = board;
   this.puckID = puckID;
 
-  this.gifLength = 5000;
+  this.gifLength = 8000;
   this.framesPerSecond = 5;
 
   this.lastHit = {x: 0, y: 0};

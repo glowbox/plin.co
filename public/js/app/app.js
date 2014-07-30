@@ -19,7 +19,7 @@ var SCREEN_HEIGHT = isLive ? 800 : window.innerWidth,
       SCREEN_HEIGHT_HALF = SCREEN_HEIGHT / 2;
 
 var DEBUG = false;
-var SHOW_PEGS = true;
+var SHOW_PEGS = false;
 var CALIBRATE_MAPPING = false;
 
 var gifs = [];
@@ -136,12 +136,13 @@ $(function() {
               tempCtx = tempCanvas.getContext("2d");
 
           var dOffset = ((viz.double && window.devicePixelRatio) > 1 ? 2 : 1);
-          var maxWidth = (board.pegWidth) * dOffset;
-          var maxHeight = (board.pegHeight) * dOffset;
-          var ratio = maxWidth / maxHeight;
-          tempCanvas.width = 480;
-          tempCanvas.height = Math.floor(480 / ratio);
+          var maxWidth = (board.boardWidth) * dOffset;
+          var maxHeight = (board.boardHeight) * dOffset;
+          var ratio = 37/58;
+          tempCanvas.width = canvas.width;
+          tempCanvas.height = canvas.height;
           var sizeRatio = maxWidth / tempCanvas.width;
+
 
           gifSize = {
             'width': tempCanvas.width,
@@ -150,7 +151,7 @@ $(function() {
 
           tempCtx.fillStyle = "black";
           tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-          tempCtx.drawImage(canvas, (canvas.width - maxWidth) / 2, (canvas.height - maxHeight) / 2, maxWidth, maxHeight, 0, 0, 480, Math.floor(480 / ratio));
+          tempCtx.drawImage(canvas, 0, 0);
           // tempCanvas.width = 480;
           // tempCanvas.height = Math.floor(480 * ratio);
           contexts.push(tempCanvas);

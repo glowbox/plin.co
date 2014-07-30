@@ -14,7 +14,7 @@ function ParticleEsplode(board, puckID) {
   }
 
   this.world;
-  this.hideGeometry = true;
+  this.hideGeometry = false;
 
   this.geometry = [];
 
@@ -53,8 +53,8 @@ function ParticleEsplode(board, puckID) {
 });
 
 Physics(function (world) {
-    var h = isLive ? 800 : window.innerWidth;
-    var w = h * 37/58;
+    var h = isLive ? 800 : window.innerHeight;
+    var w = isLive ? h * 37/58 : window.innerWidth;
     var renderer = Physics.renderer('canvas', {
         el: 'canvas',
         width: w,
@@ -144,7 +144,16 @@ Physics(function (world) {
     world.add(Physics.behavior('body-impulse-response'));
     world.add(Physics.behavior('sweep-prune'));
 
-    var bounds = Physics.aabb(0, 0, w, h);
+    var bounds;
+    if (isLive) {
+      bounds = Physics.aabb(0, 0, w, h);
+    } else {
+      bounds = Physics.aabb(
+        (window.innerWidth - board.boardWidth) / 2,
+        (window.innerHeight - board.boardHeight) / 2,
+        (window.innerWidth - board.boardWidth) / 2 + board.boardWidth,
+        (window.innerHeight - board.boardHeight) / 2 + board.boardHeight);
+    }
 
     world.add(Physics.behavior('edge-collision-detection', {
         aabb: bounds,
