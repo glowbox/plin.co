@@ -13,6 +13,22 @@ function ParticleEsplode(board, puckID) {
     this.particles.push( {x:0, y:0, vx:0, vy:0, alive:false});
   }
 
+
+  var scheme = new ColorScheme;
+  scheme.from_hue(Math.floor(Math.random() * 360))
+    .scheme('tetrade')
+    .distance(0.5)
+    .add_complement(false)
+    .variation('light')
+    .web_safe(false);
+  /*var colorValues = scheme.colors();
+  this.colors = [];
+  for (var i = 0; i < colorValues.length; i++) {
+    var rgb = hexToRgb(colorValues[i]);
+    this.colors.push([ rgb.r, rgb.g, rgb.b ]);
+  }*/
+  this.colors = scheme.colors();
+
   this.world;
   this.hideGeometry = false;
 
@@ -183,7 +199,10 @@ Physics(function (world) {
 
   this.addParticles = function(x, y, runCurr) {
     for(var i = 0; i < 3; i++){
-      console.log(i);
+      var colorIndex = Math.floor(Math.random() * this.colors.length);
+      console.log(i, this.colors[colorIndex]);
+
+        if(Math.random() > 0.5){
         var circ = Physics.body('circle', {
             x: x - 5,
             y: y - 20,
@@ -192,7 +211,7 @@ Physics(function (world) {
             radius: (board.pegSpacing / 10) + Math.random() * (board.pegSpacing / 10),
             mass: .0000000001,
             styles: {
-                fillStyle: 'rgb(' + Math.floor(Math.random() * 255) + ',' + Math.floor(Math.random() * 255) + ' ,' + Math.floor(Math.random() * 255) + ' )',
+                fillStyle: "#" + this.colors[colorIndex],//'rgb(' + this.colors[colorIndex].r + ', ' + this.colors[colorIndex].g + ', ' + this.colors[colorIndex].b + ')',
                 angleIndicator: 'none'
             },
             restitution: .0
@@ -201,6 +220,26 @@ Physics(function (world) {
         });
         self.geometry.push(circ);
         this.world.add(circ);
+      } else {
+        var circ = Physics.body('rectangle', {
+            x: x - 5,
+            y: y - 20,
+            vy: -Math.random() * .3,
+            vx: -.1 + Math.random() * .2,
+            width: (board.pegSpacing / 14) + Math.random() * (board.pegSpacing / 3),
+            height: (board.pegSpacing / 14) + Math.random() * (board.pegSpacing / 3),
+            mass: .0000000001,
+            styles: {
+                fillStyle: "#" + this.colors[colorIndex],//'rgb(' + this.colors[colorIndex].r + ', ' + this.colors[colorIndex].g + ', ' + this.colors[colorIndex].b + ')',
+                angleIndicator: 'none'
+            },
+            restitution: .0
+
+            // restitution: 0.9
+        });
+        self.geometry.push(circ);
+        this.world.add(circ);
+      }
     }
   }
 

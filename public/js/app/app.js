@@ -127,17 +127,17 @@ function appSocketOnStart(data){
 }
 
 function appSocketOnPeg(data){
-        if (DEBUG) console.log(data.index);
-        if (lastPeg !== parseInt(data.index, 10)) {
-          lastPeg = parseInt(data.index, 10);
-          if (!hasStarted) {
-            hasStarted = true;
-            startTime = new Date().getTime();
-            if (DEBUG) console.log('reset start Time');
-          }
-          viz.hit(0, parseInt(data.index, 10));
-        }
-      }
+  if (DEBUG) console.log(data.index);
+  if (lastPeg !== parseInt(data.index, 10)) {
+    lastPeg = parseInt(data.index, 10);
+    if (!hasStarted) {
+      hasStarted = true;
+      startTime = new Date().getTime();
+      if (DEBUG) console.log('reset start Time');
+    }
+    viz.hit(0, parseInt(data.index, 10));
+  }
+}
 
 function appKeyDown(e) {
   if (e.keyCode === 32) {
@@ -185,6 +185,7 @@ function appMouseMove(e) {
   mousePosition.x = e.pageX;
   mousePosition.y = e.pageY;
 }
+
 
 function appMouseUp(e) {
   if(dragging){
@@ -296,6 +297,14 @@ function resizeCanvas() {
 
 function distanceTo(x1, y1, x2, y2) {
   return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+}
+function hexToRgb(hex) {
+  var bigint = parseInt(hex, 16);
+  var r = (bigint >> 16) & 255;
+  var g = (bigint >> 8) & 255;
+  var b = bigint & 255;
+
+  return { r: r, g: g, b: b };
 }
 
 var dragging = false;
