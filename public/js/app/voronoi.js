@@ -18,7 +18,7 @@ function VoronoiViz(board, puckID) {
   this.fillColors = [];
 
   this.voronoi = d3.geom.voronoi()
-    .clipExtent([[0, 0], [1500, 1500]]);
+    .clipExtent([[0, 0], [board.boardWidth, board.boardHeight]]);
 
   this.colors = [];
   
@@ -32,7 +32,7 @@ function VoronoiViz(board, puckID) {
     .variation('hard')
     .web_safe(false);
   var colorValues = scheme.colors();
-  //console.log(colorValues);
+  
   for (var i = 0; i < colorValues.length; i++) {
     var rgb = hexToRgb(colorValues[i]);
     this.colors.push([ rgb.r, rgb.g, rgb.b ]);

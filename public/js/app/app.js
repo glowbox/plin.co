@@ -94,7 +94,10 @@ $(function() {
   $(window).bind('mousedown', appMouseDown);
   $(window).bind('mouseup', appMouseUp);
   $(window).bind('mousemove', appMouseMove);
-  // updatePerspectiveTransform();
+  
+  if(isLive){
+    updatePerspectiveTransform();
+  }
 });
 
 function appSocketOnConnect(){
@@ -171,6 +174,7 @@ function appKeyDown(e) {
     if(index !== -1) {
       targetPoints[index][0] = mousePosition.x;
       targetPoints[index][1] = mousePosition.y;
+      console.log("update:", targetPoints);
       updatePerspectiveTransform();
     }
   }
@@ -314,7 +318,10 @@ function updatePerspectiveTransform() {
   var transform = ["", "-webkit-", "-moz-", "-ms-", "-o-"].reduce(function(p, v) { return v + "transform" in document.body.style ? v : p; }) + "transform";
   
   var sourcePoints = [[0, 0], [SCREEN_WIDTH, 0], [SCREEN_WIDTH, SCREEN_HEIGHT], [0, SCREEN_HEIGHT]];
-    
+  
+
+  console.log("Source points: ", sourcePoints);
+  console.log("Target points: ", targetPoints);
 
   for (var a = [], b = [], i = 0, n = sourcePoints.length; i < n; ++i) {
     var s = sourcePoints[i], t = targetPoints[i];
@@ -332,6 +339,7 @@ function updatePerspectiveTransform() {
     return d3.round(x, 6);
   });
  
+  console.log("Update maxtrix: ", matrix);
   $(canvas).css(transform, "matrix3d(" + matrix.join(',') + ")");
   $(canvas).css(transform + "-origin", "0px 0px 0px");
 }

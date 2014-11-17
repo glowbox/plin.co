@@ -17,6 +17,14 @@ var request = require('request');
 var PNG = require('png-js');
 var GIFEncoder = require('gifencoder');
 
+// wrapper for console output, muted if config.DEBUG is not enabled.
+function debug(args) {
+  if(config.DEBUG){
+    console.log.call(console, args);
+  }
+}
+
+
 process.on('uncaughtException', function (err) {
   if (err.stack.indexOf('png-js') !== -1) {
     if (encoderFramesCurr < encoderFrames) {
@@ -32,7 +40,7 @@ process.on('uncaughtException', function (err) {
 var io = require('socket.io')(server);
 var sockets = [];
 io.on('connection', function(socket){
-  if (config.DEBUG) console.log('CONNECTED!');
+  debug('CONNECTED!');
   sockets.push(socket);
 });
 
@@ -76,20 +84,12 @@ if (!process.env.OFFLINE) {
 if (process.env.SERIALPORT1) {
   var SerialPort = require("serialport").SerialPort;
 
-  var serialPort1 = new SerialPort(process.env.SERIALPORT1, {
-    baudrate: 9600
+  var serialPort = new SerialPort(process.env.SERIAL_PORT, {
+    baudrate: process.env.SERIAL_BAUD_RATE
   }, false);
 
-  serialPort1.open(function () {
-    serialPort1.on('data', serialReceived);
-  });
-
-  var serialPort2 = new SerialPort(process.env.SERIALPORT2, {
-    baudrate: 9600
-  }, false);
-
-  serialPort2.open(function () {
-    serialPort2.on('data', serialReceived);
+  serialPort.open(function () {
+    serialPort.on('data', serialReceived);
   });
 }
 
@@ -190,11 +190,7 @@ function isCallerMobile(req) {
 }
 
 function updateSocketHistory() {
-  for (var i = 0; i < sockets.length; i++) {
-    if (sockets[i].connected) {
-      sockets[i].broadcast.emit('history', {'history': history});
-    }
-  }
+  io.emit('history', {'history': history});
 }
 
 function postTweet(tempId, gifName, path) {
@@ -213,7 +209,7 @@ function postTweet(tempId, gifName, path) {
       },
       function(error, result) {
         if (error) {
-          if (config.DEBUG) console.log('Error: ' + (error.code ? error.code + ' ' + error.message : error.message));
+          debug('Error: ' + (error.code ? error.code + ' ' + error.message : error.message));
         }
         if (result) {
           // console.log(result);
@@ -271,7 +267,7 @@ app.post('/upload/', function(req, res) {
       var data = req.body.pngs[i].replace(/^data:image\/\w+;base64,/, "");
       var buf = new Buffer(data, 'base64');
       var s = "000" + i;
-      if (config.DEBUG) console.log('Saving file: ' + s.substr(s.length-3));
+      debug('Saving file: ' + s.substr(s.length-3));
       fs.writeFile('tmp/' + tempId + '/' + s.substr(s.length-3) + '.png', buf);
     }
 
@@ -290,7 +286,7 @@ app.post('/upload/', function(req, res) {
 function addFrame(encoder, currGif, max) {
   var f = "000" + currGif;
   encoderFramesCurr = currGif;
-  if (config.DEBUG) console.log('ADDING FRAMES: ' + f.substr(f.length-3));
+  debug('ADDING FRAMES: ' + f.substr(f.length-3));
 
   var tempId = allIds[nextId];
   var gifName = allIds[nextId] + '.gif';
@@ -302,7 +298,7 @@ function addFrame(encoder, currGif, max) {
         encoder.addFrame(pixels);
         addFrame(encoder, currGif, max);
       } else {
-        if (config.DEBUG) console.log('ENCODER FINISHED!');
+        debug('ENCODER FINISHED!');
         encoder.finish();
 
         var midId = '000' + Math.floor(currGif / 2);
@@ -315,7 +311,7 @@ function addFrame(encoder, currGif, max) {
             history[history.length - 1]['saved'] = true;
             updateSocketHistory()
 
-            if (config.DEBUG) console.log('FILE PLACED');
+            debug('FILE PLACED');
 
             if (config.POST_TWEET) {
               postTweet(tempId, gifName, path)
@@ -324,12 +320,8 @@ function addFrame(encoder, currGif, max) {
             }
 
             
-            // if (config.DEBUG) console.log('Ready data for: ' + allIds[nextId]);
-            // for (var i = 0; i < sockets.length; i++) {
-            //   if (sockets[i].connected) {
-            //     sockets[i].broadcast.emit('end', {'id': allIds[nextId]});
-            //   }
-            // }
+            // debug('Ready data for: ' + allIds[nextId]);
+            // io.emit('end', {'id': allIds[nextId]});
           });
         }
       }
@@ -399,13 +391,14 @@ app.post('/set-projection-points/', function(req, res) {
   var targets = req.body.targetPoints;
   projectionTargetPoints = targets;
   if (client) {
+    console.log("Saving projection mapping points..");
     client.set('projectionTargetPoints', targets);
   }
   return res.send('success!');
 })
 
 app.post('/end-run/', function(req, res) {
-  serialReceived('stop');
+  endDrop();
   history[history.length - 1]['complete'] = true;
   updateSocketHistory();
   isRunning = false;
@@ -417,13 +410,9 @@ app.post('/free-run/', function(req, res) {
     history[history.length - 1]['complete'] = true;
     updateSocketHistory();
   }
-  serialReceived('stop');
+  endDrop();
   isRunning = false;
-  for (var i = 0; i < sockets.length; i++) {
-    if (sockets[i].connected) {
-      sockets[i].broadcast.emit('reset', {'id': req.body.mode, 'freemode': true});
-    }
-  }
+  io.emit('reset', {'id': req.body.mode, 'freemode': true});
   return res.send('success!');
 });
 
@@ -465,11 +454,7 @@ app.post('/add-user/', function(req, res) {
   if (client) {
     client.set('queue', JSON.stringify(queueJSON), redis.print);
   }
-  for (var i = 0; i < sockets.length; i++) {
-    if (sockets[i].connected) {
-      sockets[i].broadcast.emit('queue', queueJSON);
-    }
-  }
+  io.emit('queue', queueJSON);
   console.log(queueJSON);
   return res.send('success!');
 });
@@ -483,11 +468,7 @@ app.post('/remove-user/', function(req, res) {
   if (client) {
     client.set('queue', JSON.stringify(queueJSON), redis.print);
   }
-  for (var i = 0; i < sockets.length; i++) {
-    if (sockets[i].connected) {
-      sockets[i].broadcast.emit('queue', {'queue': queue});
-    }
-  }
+  io.emit('queue', {'queue': queue});
   updateSocketHistory();
   return res.send('success!');
 });
@@ -497,7 +478,9 @@ app.post('/next-user/', function(req, res) {
   var queueJSON = {
     'queue': queue
   }
-  serialReceived('start');
+  
+  startDrop();
+
   if (client) {
     client.set('queue', JSON.stringify(queueJSON), redis.print);
   }
@@ -506,12 +489,8 @@ app.post('/next-user/', function(req, res) {
     'id': allIds[nextId],
     'complete': 'progress'
   })
-  for (var i = 0; i < sockets.length; i++) {
-    if (sockets[i].connected) {
-      sockets[i].broadcast.emit('reset', {'id': allIds[nextId], 'freemode': false});
-      sockets[i].broadcast.emit('queue', {'queue': queue});
-    }
-  }
+  io.emit('reset', {'id': allIds[nextId], 'freemode': false});
+  io.emit('queue', {'queue': queue});
   updateSocketHistory();
   return res.send('success!');
 });
@@ -519,7 +498,7 @@ app.post('/next-user/', function(req, res) {
 function serialFakeTest(skip) {
   if (skip) {
     setTimeout(function() {
-      serialReceived('start');
+      startDrop();
     }, 1000);
   }
   var tempPegs = [11, 7, 19, 8];
@@ -532,139 +511,126 @@ function serialFakeTest(skip) {
   }
 }
 
+
+function startDrop() {
+  debug('Starting record for: ' + allIds[nextId]);
+ 
+  fs.mkdir('tmp/' + allIds[nextId] + '/');
+  io.emit('start', {'id': allIds[nextId]});
+  serialData = [];
+  isRunning = true;
+}
+
+
+function endDrop() {
+  debug('Setting data for: ' + allIds[nextId]);
+  if (serialData.length) {
+    var startTime = serialData[0][0];
+    var tempId = nextId;
+    for (var i = 0; i < serialData.length; i++) {
+      serialData[i][0] = (serialData[i][0] - startTime) / 1000;
+    }
+    var dataComplete = {
+      runs: [
+        serialData
+      ],
+      twitter: history.length ? history[history.length - 1]['twitter'] : '',
+      time: new Date().getTime()
+    }
+    if (client) {
+      client.set(allIds[nextId], JSON.stringify(dataComplete), redis.print);
+    }
+    serialData = [];
+    client.get('allIds', function (e, r) {
+      if (r) {
+        var idData = JSON.parse(r);
+        idData['last'] = allIds[tempId];
+        client.set('allIds', JSON.stringify(idData), redis.print);
+      }
+    });
+    recent.unshift(allIds[tempId]);
+    recent.splice(5);
+    if (client) {
+      client.set('recent', JSON.stringify({'recent': recent}), redis.print);
+    }
+    nextId++;
+  }
+  isRunning = false;
+}
+
+
 function serialReceived(data){
   var codes = data.toString();
-  if (codes == 'start' || codes == 'stop') {
-    handPinCode(codes);
-  } else {
-    for(var i = 0; i < codes.length; i++){
-      handPinCode(codes[i]);
-    }
+  for(var i = 0; i < codes.length; i++){
+    handlePinCode(codes[i]);
   }
 }
 
-function handPinCode(data) {
-  if (config.DEBUG) console.log('RAW CODE: ' + data);
+
+function handlePinCode(data) {
+  debug('RAW CODE: ' + data);
+  
   var raw = data;
   data = data.toString().charCodeAt(0) - 32;
-  if (raw === 'start') {
-    if (config.DEBUG) console.log('Starting record for: ' + allIds[nextId]);
-    fs.mkdir('tmp/' + allIds[nextId] + '/');
-    for (var i = 0; i < sockets.length; i++) {
-      if (sockets[i].connected) {
-        sockets[i].broadcast.emit('start', {'id': allIds[nextId]});
+  
+  debug('Received data for peg: ' + pegMap[parseInt(data, 10)]);
+  
+  if (!isCalibrating) {
+    var pin = parseInt(data, 10);
+    var errorPin = false;
+
+    for (var i = 0; i < serialData.length; i++) {
+      // if (serialData[i][1] > 12) {
+      // }
+    }
+
+    var row = Math.floor(pin/6.5);
+    var col = Math.floor(pin%6.5);
+    var lowest = 0;
+
+    for (var i = 0; i < serialData.length; i++) {
+      var testPin = serialData[i][1];
+      var testRow = Math.floor(testPin/6.5);
+      if (testRow > lowest) {
+        lowest = testRow;
       }
     }
-    serialData = [];
-    isRunning = true;
-  } else if (raw === 'stop') {
-    if (config.DEBUG) console.log('Setting data for: ' + allIds[nextId]);
+
     if (serialData.length) {
-      var startTime = serialData[0][0];
-      var tempId = nextId;
-      for (var i = 0; i < serialData.length; i++) {
-        serialData[i][0] = (serialData[i][0] - startTime) / 1000;
-      }
-      var dataComplete = {
-        runs: [
-          serialData
-        ],
-        twitter: history.length ? history[history.length - 1]['twitter'] : '',
-        time: new Date().getTime()
-      }
-      if (client) {
-        client.set(allIds[nextId], JSON.stringify(dataComplete), redis.print);
-      }
-      serialData = [];
-      client.get('allIds', function (e, r) {
-        if (r) {
-          var idData = JSON.parse(r);
-          idData['last'] = allIds[tempId];
-          client.set('allIds', JSON.stringify(idData), redis.print);
-        }
-      });
-      recent.unshift(allIds[tempId]);
-      recent.splice(5);
-      if (client) {
-        client.set('recent', JSON.stringify({'recent': recent}), redis.print);
-      }
-      nextId++;
-    }
-    isRunning = false;
-  } else {
-    if (config.DEBUG) console.log('Received data for peg: ' + pegMap[parseInt(data, 10)]);
-    if (!isCalibrating) {
-      
-
-      var pin = parseInt(data, 10);
-      var errorPin = false;
-
-      for (var i = 0; i < serialData.length; i++) {
-        // if (serialData[i][1] > 12) {
-
-        // }
-
-      }
-
-      var row = Math.floor(pin/6.5);
-      var col = Math.floor(pin%6.5);
-      var lowest = 0;
-
-      for (var i = 0; i < serialData.length; i++) {
-        var testPin = serialData[i][1];
-        var testRow = Math.floor(testPin/6.5);
-        if (testRow > lowest) {
-          lowest = testRow;
-        }
-      }
-
-      if (serialData.length) {
-        var lastPin = serialData[serialData.length - 1][1];
-        var lastRow = Math.floor(lastPin/6.5);
-        var lastCol = Math.floor(lastPin%6.5);
-        if (lowest > 1) {
-          if (Math.abs(lastCol - col) - Math.abs(lastRow - row) >= 3) {
-            if (config.DEBUG) console.log('TOO FAR AWAY');
-            errorPin = true;
-          } else if (lowest - row >= 2) {
-            if (config.DEBUG) console.log('HIGHER THAN THE LOWEST (MOXY FRUVOUS)');
-            errorPin = true;
-          }
-        } else {
-
-        }
-      } else {
-        if (row > 1) {
-          if (config.DEBUG) console.log('STARTED TOO FAR DOWN');
+      var lastPin = serialData[serialData.length - 1][1];
+      var lastRow = Math.floor(lastPin/6.5);
+      var lastCol = Math.floor(lastPin%6.5);
+      if (lowest > 1) {
+        if (Math.abs(lastCol - col) - Math.abs(lastRow - row) >= 3) {
+          debug('TOO FAR AWAY');
+          errorPin = true;
+        } else if (lowest - row >= 2) {
+          debug('HIGHER THAN THE LOWEST (MOXY FRUVOUS)');
           errorPin = true;
         }
-      }
+      } else {
 
-
-      if (!errorPin) {
-
-        if (isRunning) {
-          serialData.push([new Date().getTime(), pegMap[parseInt(data, 10)]]);
-        }
-        for (var i = 0; i < sockets.length; i++) {
-          if (sockets[i].connected) {
-            sockets[i].emit('peg', {'index': pegMap[parseInt(data, 10)]});
-          }
-        }
       }
     } else {
-      pegMap[parseInt(data, 10)] = parseInt(currCalibrationPin, 10);
-      if (client) {
-        client.set('pegMap', JSON.stringify({'map': pegMap}));
-      }
-      console.log(pegMap);
-      for (var i = 0; i < sockets.length; i++) {
-        if (sockets[i].connected) {
-          console.log(i);
-          sockets[i].broadcast.emit('peg', {'index': pegMap[parseInt(data, 10)]});
-        }
+      if (row > 1) {
+        debug('STARTED TOO FAR DOWN');
+        errorPin = true;
       }
     }
+
+    if (!errorPin) {
+      if (isRunning) {
+        serialData.push([new Date().getTime(), pegMap[parseInt(data, 10)]]);
+      }
+      io.emit('peg', {'index': pegMap[parseInt(data, 10)]});
+    }
+  } else {
+    // It's in calibration mode, store the pin mapping.
+    pegMap[parseInt(data, 10)] = parseInt(currCalibrationPin, 10);
+    if (client) {
+      client.set('pegMap', JSON.stringify({'map': pegMap}));
+    }
+    io.emit('peg', {'index': pegMap[parseInt(data, 10)]});
   }
 }
 
