@@ -7,7 +7,7 @@ function VoronoiViz(board, puckID) {
   this.gifLength = 8000;
   this.framesPerSecond = 5;
 
-  this.lastHit = {x: 0, y: 0};
+  this.lastHit = {x: -1, y: -1};
   this.isFirst = true;
 
   this.voronoiData = null;
@@ -30,13 +30,16 @@ function VoronoiViz(board, puckID) {
     this.centers.push( [coords.x, coords.y] );
     this.velocity.push( [0,0] );
   }
-  this.lastHit = {x:this.points[0][0], y:this.points[0][1]}
+  // this.lastHit = {x:this.points[0][0], y:this.points[0][1]}
 
   canvas.className = '';
 
   this.hit = function(runCurr, index) {
     var coor = board.getPinCoordinates(index);
 
+    if (this.lastHit.x == -1 && this.lastHit.y == -1) {
+      this.lastHit = {x:coor.x, y:coor.y}
+    }
     var deltaX = (coor.x - this.lastHit.x);
     var deltaY = (coor.y - this.lastHit.y);
 
