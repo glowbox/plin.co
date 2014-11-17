@@ -522,12 +522,12 @@ function serialFakeTest(skip) {
       serialReceived('start');
     }, 1000);
   }
-  // var tempPegs = [2, 3, 9, 16, 17, 23, 29, 28, 35, 36, 42, 48, 55, 54, 61];
-  var tempPegs = [21, 18, 13, 11, 4];
+  var tempPegs = [11, 7, 19, 8];
+  // var tempPegs = [0];
   var currPeg = 0;
   for (var i = 0; i < tempPegs.length; i++) {
     setTimeout(function() {
-      serialReceived(String.fromCharCode(tempPegs[currPeg++] + 65));
+      serialReceived(String.fromCharCode(tempPegs[currPeg++] + 32));
     }, 1500 + i * 200);
   }
 }
@@ -544,10 +544,9 @@ function serialReceived(data){
 }
 
 function handPinCode(data) {
-  console.log('RAW CODE: ' + data);
+  if (config.DEBUG) console.log('RAW CODE: ' + data);
   var raw = data;
   data = data.toString().charCodeAt(0) - 32;
-  console.log(data);
   if (raw === 'start') {
     if (config.DEBUG) console.log('Starting record for: ' + allIds[nextId]);
     fs.mkdir('tmp/' + allIds[nextId] + '/');
@@ -595,13 +594,62 @@ function handPinCode(data) {
   } else {
     if (config.DEBUG) console.log('Received data for peg: ' + pegMap[parseInt(data, 10)]);
     if (!isCalibrating) {
-      if (isRunning) {
-        serialData.push([new Date().getTime(), pegMap[parseInt(data, 10)]]);
+      
+
+      var pin = parseInt(data, 10);
+      var errorPin = false;
+
+      for (var i = 0; i < serialData.length; i++) {
+        // if (serialData[i][1] > 12) {
+
+        // }
+
       }
-      for (var i = 0; i < sockets.length; i++) {
-        if (sockets[i].connected) {
-          console.log(i);
-          sockets[i].broadcast.emit('peg', {'index': pegMap[parseInt(data, 10)]});
+
+      var row = Math.floor(pin/6.5);
+      var col = Math.floor(pin%6.5);
+      var lowest = 0;
+
+      for (var i = 0; i < serialData.length; i++) {
+        var testPin = serialData[i][1];
+        var testRow = Math.floor(testPin/6.5);
+        if (testRow > lowest) {
+          lowest = testRow;
+        }
+      }
+
+      if (serialData.length) {
+        var lastPin = serialData[serialData.length - 1][1];
+        var lastRow = Math.floor(lastPin/6.5);
+        var lastCol = Math.floor(lastPin%6.5);
+        if (lowest > 1) {
+          if (Math.abs(lastCol - col) - Math.abs(lastRow - row) >= 3) {
+            if (config.DEBUG) console.log('TOO FAR AWAY');
+            errorPin = true;
+          } else if (lowest - row >= 2) {
+            if (config.DEBUG) console.log('HIGHER THAN THE LOWEST (MOXY FRUVOUS)');
+            errorPin = true;
+          }
+        } else {
+
+        }
+      } else {
+        if (row > 1) {
+          if (config.DEBUG) console.log('STARTED TOO FAR DOWN');
+          errorPin = true;
+        }
+      }
+
+
+      if (!errorPin) {
+
+        if (isRunning) {
+          serialData.push([new Date().getTime(), pegMap[parseInt(data, 10)]]);
+        }
+        for (var i = 0; i < sockets.length; i++) {
+          if (sockets[i].connected) {
+            sockets[i].emit('peg', {'index': pegMap[parseInt(data, 10)]});
+          }
         }
       }
     } else {
