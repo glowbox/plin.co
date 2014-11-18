@@ -93,7 +93,7 @@ if (process.env.SERIALPORT1) {
   });
 }
 
-if (process.env.REDISCLOUD_URL && !process.env.OFFLINE) {
+if (process.env.REDISCLOUD_URL && process.env.OFFLINE == 'false') {
   var redis = require('redis');
   var url = require('url');
   var redisURL = url.parse(process.env.REDISCLOUD_URL);
@@ -107,11 +107,14 @@ if (process.env.REDISCLOUD_URL && !process.env.OFFLINE) {
     }
   });
 
-  client.get('projectionTargetPoints', function (e, r) {
-    if (r) {
-      projectionTargetPoints = r;
-    }
-  });
+  // client.get('projectionTargetPoints', function (e, r) {
+  //   if (r) {
+  //     projectionTargetPoints = r;
+  //   }
+  // });
+
+
+
   // var m = {};
   // for (var i = 0; i < 85; i++) {
   //   m[i] = i;
@@ -342,7 +345,7 @@ app.get(/^\/([a-z]{3})$/, function(req, res) {
         if (isCallerMobile(req)) {
           getGif(req, res);
         } else {
-          return res.render('app.mustache', {id: id, run: data.runs[0], 'js': 'app'});
+          return res.render('app.mustache', {id: id, run: data.runs[0], 'js': 'app', 'projectionTargetPoints' : projectionTargetPoints});
         }
       } else {
         return res.render('404.mustache');
@@ -442,7 +445,8 @@ app.post('/pin-calib', function(req, res) {
 })
 
 app.post('/peg-hit', function(req, res) {
-  serialReceived(req.body.peg);
+  console.log(req.body.peg, String.fromCharCode(parseInt(req.body.peg) + 33), pegMap[req.body.peg]);
+  serialReceived(String.fromCharCode(pegMap[req.body.peg] + 33));
   return res.send('success!');
 });
 

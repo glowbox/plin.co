@@ -18,7 +18,9 @@ function VoronoiViz(board, puckID) {
   this.fillColors = [];
 
   this.voronoi = d3.geom.voronoi()
-    .clipExtent([[0, 0], [board.boardWidth, board.boardHeight]]);
+    .clipExtent([[0, 0], [2920, 3000]]);
+
+  console.log(board.boardWidth, board.boardHeight);
 
   this.colors = [];
   
@@ -85,6 +87,7 @@ function VoronoiViz(board, puckID) {
       this.points[i][0] += this.velocity[i][0];
       this.points[i][1] += this.velocity[i][1];
     }
+    console.log(this.points);
     this.voronoiData = this.voronoi(this.points);
   }
 

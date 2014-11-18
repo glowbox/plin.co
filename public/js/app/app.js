@@ -13,7 +13,7 @@ var renderer;
 var BOARD_RATIO = 37/58;
 
 
-var SCREEN_HEIGHT = isLive ? 800 : window.innerWidth,
+var SCREEN_HEIGHT = isLive ? 1920 : window.innerWidth,
     SCREEN_WIDTH = isLive ? (SCREEN_HEIGHT * BOARD_RATIO) : window.innerHeight,
       SCREEN_WIDTH_HALF = SCREEN_WIDTH  / 2,
       SCREEN_HEIGHT_HALF = SCREEN_HEIGHT / 2;
@@ -40,7 +40,6 @@ var freeMode = true;
 var mousePosition = {x:0,y:0};
 
 $(function() {
-
   Math.seedrandom(puckID);
 
   if (live) {
