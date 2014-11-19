@@ -83,8 +83,8 @@ $(function() {
                                   if (DEBUG) console.log(pegNum);
                                   viz.hit(++runCurr, pegNum);
                                 });
-  //viz = chooseViz(puckID);
-  viz = new AttractMode(board, 1);
+  viz = chooseViz(puckID);
+  //viz = new AttractMode(board, 1);
 
   // viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
   
@@ -324,6 +324,7 @@ function resizeCanvas() {
     canvas.width = canvas.width * ((viz.double && window.devicePixelRatio) > 1 ? 2 : 1);
     canvas.height = canvas.height * ((viz.double && window.devicePixelRatio) > 1 ? 2 : 1);
   }
+  console.log("Canvas resize: ", canvas.width, canvas.height);
 }
 
 function distanceTo(x1, y1, x2, y2) {
@@ -343,7 +344,9 @@ var dragging = false;
 var dragIndex = 0;
 
 function updatePerspectiveTransform() {
-
+  if(!isLive) {
+    return;
+  }
   if(useCSSProjectionMapping){
     updateCSSPerspectiveTransform();
   } else {
