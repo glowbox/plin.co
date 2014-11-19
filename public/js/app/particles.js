@@ -30,7 +30,7 @@ function ParticleEsplode(board, puckID) {
   this.colors = scheme.colors();
 
   this.world;
-  this.hideGeometry = false;
+  this.hideGeometry = true;
 
   this.geometry = [];
 
@@ -200,7 +200,6 @@ Physics(function (world) {
   this.addParticles = function(x, y, runCurr) {
     for(var i = 0; i < 3; i++){
       var colorIndex = Math.floor(Math.random() * this.colors.length);
-      console.log(i, this.colors[colorIndex]);
 
         if(Math.random() > 0.5){
         var circ = Physics.body('circle', {

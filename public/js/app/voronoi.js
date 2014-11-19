@@ -20,14 +20,12 @@ function VoronoiViz(board, puckID) {
   this.voronoi = d3.geom.voronoi()
     .clipExtent([[0, 0], [2920, 3000]]);
 
-  console.log(board.boardWidth, board.boardHeight);
-
   this.colors = [];
-  
 
+  this.random = new Math.seedrandom(this.puckID);
 
   var scheme = new ColorScheme;
-  scheme.from_hue(Math.floor(Math.random() * 360))
+  scheme.from_hue(Math.floor(this.random() * 360))
     .scheme('triade')
     .distance(0.1)
     .add_complement(false)
@@ -60,12 +58,12 @@ function VoronoiViz(board, puckID) {
     var deltaX = (coor.x - this.lastHit.x);
     var deltaY = (coor.y - this.lastHit.y);
 
-    var count = Math.random() * 10 + 8;
+    var count = this.random() * 10 + 8;
     for(var i = 0; i < count; i++){ 
-      var x = (Math.random() * deltaX) + this.lastHit.x + (Math.random() * 10 - 5);
-      var y = (Math.random() * deltaY) + this.lastHit.y + (Math.random() * 10 - 5);
+      var x = (this.random() * deltaX) + this.lastHit.x + (this.random() * 10 - 5);
+      var y = (this.random() * deltaY) + this.lastHit.y + (this.random() * 10 - 5);
       this.points.push([x,y]);
-      this.velocity.push([(Math.random() - 0.5)*2, (Math.random() * 0.5)*2]);
+      this.velocity.push([(this.random() - 0.5)*2, (this.random() * 0.5)*2]);
       this.centers.push([x,y]);
       var dist = distanceTo(x,y,coor.x,coor.y);
       var index = Math.floor(dist * 0.1);

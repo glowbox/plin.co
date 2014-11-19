@@ -198,14 +198,14 @@ function updateSocketHistory() {
   io.emit('history', {'history': history});
 }
 
-function postTweet(tempId, gifName, path) {
+function postTweet(gif, gifName, path) {
   if (twitterRestClient) {
     history[history.length - 1]['tweeted'] = 'progress';
     updateSocketHistory();
-    var status = 'Another round played! Check it out at http://plin.co/' + allIds[nextId] + '! #cascadiajs';
-    console.log(history[history.length - 1]);
+    var status = 'Another round played! Check it out at http://plin.co/' + gif + '!';
+    debug(history[history.length - 1]);
     if (history[history.length - 1]['twitter'].length) {
-      status = 'Thanks for playing, @' + history[history.length - 1]['twitter'] + '. Check out your run at http://plin.co/' + allIds[nextId] + '! #cascadiajs';
+      status = 'Thanks for playing, @' + history[history.length - 1]['twitter'] + '. Check out your run at http://plin.co/' + gif + '!';
     }
     twitterRestClient.statusesUpdateWithMedia(
       {
@@ -220,7 +220,7 @@ function postTweet(tempId, gifName, path) {
           // console.log(result);
         }
 
-        removeGifFiles(tempId, gifName, path);
+        removeGifFiles(gif, gifName, path);
 
         history[history.length - 1]['tweeted'] = true;
         updateSocketHistory()
@@ -260,9 +260,8 @@ app.post('/upload/', function(req, res) {
 
   } else {
     if (knoxClient) {
-      console.log('KNOX CLIENT!!!');
+      debug('KNOX CLIENT!!!');
     }
-    console.log(req.body);
     if (history.length) {
       history[history.length - 1]['saved'] = 'progress';
       updateSocketHistory();
@@ -277,7 +276,7 @@ app.post('/upload/', function(req, res) {
     encoder.setDelay(1000/req.body.fps);  // frame delay in ms
     encoder.setQuality(10);
     encoderFrames = req.body.gifLength/1000 * req.body.fps;
-    getAnimationFrames(encoder, 0, encoderFrames, allIds[nextId]);
+    getAnimationFrames(encoder, 0, encoderFrames, allIds[nextId], 1000/req.body.fps);
 
     endDrop();
     history[history.length - 1]['complete'] = true;
@@ -296,10 +295,9 @@ function addFrame(encoder, currGif, max, gif) {
   var gifName = gif + '.gif';
   var path = __dirname + '/tmp/' + gif;
 
-  console.log(max, __dirname + '/tmp/_plinco/' + gif + '-' + currGif + '.png');
   try {
     PNG.decode(__dirname + '/tmp/_plinco/' + gif + '-' + currGif + '.png', function(pixels) {
-      if (currGif++ < max) {
+      if (currGif++ < max - 1) {
         encoder.addFrame(pixels);
         addFrame(encoder, currGif, max, gif);
       } else {
@@ -403,10 +401,12 @@ app.post('/set-projection-points/', function(req, res) {
 })
 
 app.post('/end-run/', function(req, res) {
-  endDrop();
-  history[history.length - 1]['complete'] = true;
-  updateSocketHistory();
-  isRunning = false;
+  if (isRunning) {
+    endDrop();
+    history[history.length - 1]['complete'] = true;
+    updateSocketHistory();
+    isRunning = false;
+  }
   return res.send('success!');
 });
 
@@ -447,7 +447,6 @@ app.post('/pin-calib', function(req, res) {
 })
 
 app.post('/peg-hit', function(req, res) {
-  console.log(req.body.peg, String.fromCharCode(parseInt(req.body.peg) + 33), pegMap[req.body.peg]);
   serialReceived(String.fromCharCode(pegMap[req.body.peg] + 33));
   return res.send('success!');
 });
@@ -461,13 +460,11 @@ app.post('/add-user/', function(req, res) {
     client.set('queue', JSON.stringify(queueJSON), redis.print);
   }
   io.emit('queue', queueJSON);
-  console.log(queueJSON);
   return res.send('success!');
 });
 
 app.post('/remove-user/', function(req, res) {
   var user = queue.splice(queue.indexOf(req.body.username), 1);
-  console.log(user);
   var queueJSON = {
     'queue': queue
   }
@@ -508,11 +505,19 @@ function serialFakeTest(skip) {
     }, 1000);
   }
   var tempPegs = [11, 7, 19, 8, 26, 32, 38, 45, 51, 58, 64, 71, 77, 84];
+  for (var h = 0; h < tempPegs.length; h++) {
+    for (var i = 0; i < 85; i++) {
+      if (pegMap[i.toString()] == tempPegs[h]) {
+        tempPegs[h] = i;
+        i = pegMap.length + 1;
+      }
+    }
+  }
   // var tempPegs = [0];
   var currPeg = 0;
   for (var i = 0; i < tempPegs.length; i++) {
     setTimeout(function() {
-      serialReceived(String.fromCharCode(tempPegs[currPeg++] + 32));
+      serialReceived(String.fromCharCode(tempPegs[currPeg++] + 32), true);
     }, 1500 + i * 200);
   }
 }
@@ -565,15 +570,15 @@ function endDrop() {
 }
 
 
-function serialReceived(data){
+function serialReceived(data, force){
   var codes = data.toString();
   for(var i = 0; i < codes.length; i++){
-    handlePinCode(codes[i]);
+    handlePinCode(codes[i], force);
   }
 }
 
 
-function handlePinCode(data) {
+function handlePinCode(data, force) {
   debug('RAW CODE: ' + data);
   
   var raw = data;
@@ -601,11 +606,7 @@ function handlePinCode(data) {
       }
     }
 
-    console.log(serialData);
-    console.log(pin, lowest, row, col);
-
     if (serialData.length) {
-      console.log(serialData);
       var lastPin = serialData[serialData.length - 1][1];
       var lastRow = Math.floor(lastPin/6.5);
       var lastCol = Math.floor(lastPin%6.5);
@@ -628,7 +629,7 @@ function handlePinCode(data) {
     }
 
     if (!errorPin) {
-      if (isRunning) {
+      if (isRunning || force) {
         serialData.push([new Date().getTime(), pegMap[parseInt(data, 10)]]);
       }
       io.emit('peg', {'index': pegMap[parseInt(data, 10)]});
@@ -645,30 +646,29 @@ function handlePinCode(data) {
 
 setTimeout(updateSocketHistory, 1000);
 
-function getAnimationFrames(encoder, currGif, max, gif) {
+function getAnimationFrames(encoder, currGif, max, gif, speed) {
   phantom.create(function (ph) {
     ph.createPage(function (page) {
       page.set('viewportSize', {width:Math.floor(800*(37/58)),height:800})
-        console.log('http://localhost:' + port + '/' + gif);
         page.open('http://localhost:' + port + '/' + gif, function (status) {
           if (status !== 'success') {
               console.log('Unable to access the network!');
           } else {
               var num = 0;
               var interval = setInterval(function() {
-                console.log('render frame ' + num);
+                debug('render frame ' + num);
                 page.render(__dirname + '/tmp/_plinco/' + gif + '-' + num++ + '.png', function() {
                   //getBlank(++id);
                   // ph.exit();
                 });
 
-                if (num === 60) {
+                if (num === max) {
                   clearInterval(interval);
                   ph.exit();
                   addFrame(encoder, currGif, max, gif);
                 }
               
-              }, 100);
+              }, speed);
           }
       });
     });

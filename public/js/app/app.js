@@ -110,6 +110,7 @@ function appSocketOnConnect(){
 
 function appSocketOnEnd(data){
   puckID = data.id;
+  Math.seedrandom(puckID);
   hasStarted = false;
   if (DEBUG) console.log('NEXT ID: ' + data.id);
 }
@@ -117,6 +118,11 @@ function appSocketOnEnd(data){
 function appSocketOnReset(data){
   freeMode = data.freemode;
   puckID = data.id;
+  if (freeMode) {
+    Math.seedrandom(Math.random());
+  } else {
+    Math.seedrandom(puckID);
+  }
   viz.destroy();
   viz = chooseViz(puckID);
   resizeCanvas();
@@ -362,12 +368,16 @@ function onWindowResize() {
 }
 
 function chooseViz(id) {
-  if (parseInt(id.toLowerCase(), 36) % 3 == 1) {
-    return new ParticleEsplode(board, parseInt(id.toLowerCase(), 36));
-  } else if (parseInt(id.toLowerCase(), 36) % 3 == 2) {
-    return new VoronoiViz(board, parseInt(id.toLowerCase(), 36));
+  if (freeMode && isLive) {
+    if (parseInt(id.toLowerCase(), 36) % 2 == 0) {
+      return new ParticleEsplode(board, parseInt(id.toLowerCase(), 36));
+    } else if (parseInt(id.toLowerCase(), 36) % 2 == 1) {
+      return new VoronoiViz(board, parseInt(id.toLowerCase(), 36));
+    } else {
+      return new Bird(board, parseInt(id.toLowerCase(), 36));
+    }
   } else {
-    return new Bird(board, parseInt(id.toLowerCase(), 36));
+    return new VoronoiViz(board, parseInt(id.toLowerCase(), 36));
   }
 }
 
@@ -378,7 +388,6 @@ function uploadImages() {
     var img = contexts[i].toDataURL("image/png");
     pngs.push(img);
   }
-  console.log(pngs);
   // worker.postMessage(passData);
   $.post('/upload/', {'num': 0, 'type': 'image', 'fps': viz.framesPerSecond, 'gifLength': viz.gifLength});
   contexts = [];

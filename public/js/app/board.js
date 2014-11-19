@@ -8,8 +8,8 @@ function Board(showPegs, hitFunc) {
     this.boardHeight = window.innerHeight;
     this.boardWidth = this.boardHeight * this.BOARD_RATIO;
     if (window.innerWidth < window.innerHeight) {
-      this.boardWidth = window.innerWidth;
-      this.boardHeight = this.boardWidth / this.BOARD_RATIO;
+      // this.boardWidth = window.innerWidth;
+      // this.boardHeight = this.boardWidth / this.BOARD_RATIO;
     }
     this.pegHeight = this.boardHeight * (13*4.5*.866666 / 58);
     this.pegWidth = this.boardWidth * (27 / 36);
