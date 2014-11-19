@@ -218,6 +218,9 @@ function animate() {
     if (diffMain > 0 && diffMain < viz.gifLength) {
       var diffLast = now - lastImageTime;
       if (diffLast > 1000 / viz.framesPerSecond) {
+        
+        /*
+
         lastImageTime = now;
         var tempCanvas = document.createElement("canvas"),
             tempCtx = tempCanvas.getContext("2d");
@@ -256,6 +259,9 @@ function animate() {
         //   }
         //   tempCtx.putImageData(imageData, 0, 0);
         // }
+        
+
+        */
         gifs.push(0);
       }
     } else if (diffMain > viz.gifLength && gifs.length) {
@@ -357,11 +363,11 @@ function onWindowResize() {
 
 function chooseViz(id) {
   if (parseInt(id.toLowerCase(), 36) % 3 == 1) {
-    return new ParticleEsplode(board, parseInt(id.toLowerCase(), 36));
+    return new VoronoiViz(board, parseInt(id.toLowerCase(), 36));
   } else if (parseInt(id.toLowerCase(), 36) % 3 == 2) {
     return new VoronoiViz(board, parseInt(id.toLowerCase(), 36));
   } else {
-    return new BirdsViz(board, parseInt(id.toLowerCase(), 36));
+    return new VoronoiViz(board, parseInt(id.toLowerCase(), 36));
   }
 }
 
@@ -372,8 +378,9 @@ function uploadImages() {
     var img = contexts[i].toDataURL("image/png");
     pngs.push(img);
   }
+  console.log(pngs);
   // worker.postMessage(passData);
-  $.post('/upload/', {'num': 0, 'pngs': pngs, 'type': 'image', 'fps': viz.framesPerSecond, 'size': gifSize});
+  $.post('/upload/', {'num': 0, 'type': 'image', 'fps': viz.framesPerSecond, 'gifLength': viz.gifLength});
   contexts = [];
 }
 

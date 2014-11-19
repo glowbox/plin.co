@@ -87,7 +87,6 @@ function VoronoiViz(board, puckID) {
       this.points[i][0] += this.velocity[i][0];
       this.points[i][1] += this.velocity[i][1];
     }
-    console.log(this.points);
     this.voronoiData = this.voronoi(this.points);
   }
 

@@ -69,7 +69,7 @@ function ParticleEsplode(board, puckID) {
 });
 
 Physics(function (world) {
-    var h = isLive ? 800 : window.innerHeight;
+    var h = isLive ? 1920 : window.innerHeight;
     var w = isLive ? h * 37/58 : window.innerWidth;
     var renderer = Physics.renderer('canvas', {
         el: 'canvas',

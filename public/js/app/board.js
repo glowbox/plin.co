@@ -18,7 +18,7 @@ function Board(showPegs, hitFunc) {
     this.pegOffsetX = (window.innerWidth - this.pegWidth) / 2;
     this.pegOffsetY = (window.innerHeight - this.pegHeight) / 2;
   } else {
-    this.boardHeight = 800;
+    this.boardHeight = 1920;
     this.boardWidth = this.boardHeight * this.BOARD_RATIO;
     this.pegHeight = this.boardHeight * (13*4.5*.866666 / 58);
     this.pegWidth = this.boardWidth * (27 / 36);

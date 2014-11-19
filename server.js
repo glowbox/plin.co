@@ -16,6 +16,7 @@ var knox = require('knox');
 var request = require('request');
 var PNG = require('png-js');
 var GIFEncoder = require('gifencoder');
+var phantom = require('phantom');
 
 // wrapper for console output, muted if config.DEBUG is not enabled.
 function debug(args) {
@@ -46,7 +47,7 @@ io.on('connection', function(socket){
 
 var twitter = require('node-twitter');
 var twitterRestClient;
-if (process.env.TWITTER_CONSUMER_KEY && !process.env.OFFLINE) {
+if (process.env.TWITTER_CONSUMER_KEY) {
   twitterRestClient = new twitter.RestClient(
     process.env.TWITTER_CONSUMER_KEY,
     process.env.TWITTER_CONSUMER_TOKEN,
@@ -69,12 +70,13 @@ var isCalibrating = false;
 var currCalibrationPin = -1;
 
 var knoxClient;
+knoxClient = knox.createClient({
+  key: process.env.AWS_ACCESS_KEY_ID,
+  secret: process.env.AWS_SECRET_ACCESS_KEY,
+  bucket: process.env.S3_BUCKET
+});
 if (!process.env.OFFLINE) {
-  knoxClient = knox.createClient({
-    key: process.env.AWS_ACCESS_KEY_ID,
-    secret: process.env.AWS_SECRET_ACCESS_KEY,
-    bucket: process.env.S3_BUCKET
-  });
+  
 } else {
   for (var i = 0; i < 85; i++) {
     pegMap[i.toString()] = i;
@@ -257,69 +259,69 @@ app.post('/upload/', function(req, res) {
     
 
   } else {
+    if (knoxClient) {
+      console.log('KNOX CLIENT!!!');
+    }
+    console.log(req.body);
     if (history.length) {
       history[history.length - 1]['saved'] = 'progress';
       updateSocketHistory();
     }
 
-    var tempId = allIds[nextId];
     var gifName = allIds[nextId] + '.gif';
-    var path = __dirname + '/tmp/' + tempId;
 
-    for (var i = 0; i < req.body.pngs.length; i++) {
-      var data = req.body.pngs[i].replace(/^data:image\/\w+;base64,/, "");
-      var buf = new Buffer(data, 'base64');
-      var s = "000" + i;
-      debug('Saving file: ' + s.substr(s.length-3));
-      fs.writeFile('tmp/' + tempId + '/' + s.substr(s.length-3) + '.png', buf);
-    }
-
-    encoder = new GIFEncoder(req.body.size.width, req.body.size.height);
+    encoder = new GIFEncoder(Math.floor(800*(37/58)), 800);
     encoder.createReadStream().pipe(fs.createWriteStream(__dirname + '/tmp/' + gifName));
     encoder.start();
     encoder.setRepeat(0);   // 0 for repeat, -1 for no-repeat
     encoder.setDelay(1000/req.body.fps);  // frame delay in ms
     encoder.setQuality(10);
-    encoderFrames = req.body.pngs.length - 1;
-    addFrame(encoder, 0, encoderFrames);
+    encoderFrames = req.body.gifLength/1000 * req.body.fps;
+    getAnimationFrames(encoder, 0, encoderFrames, allIds[nextId]);
+
+    endDrop();
+    history[history.length - 1]['complete'] = true;
+    updateSocketHistory();
+    isRunning = false;
   }
   return res.send('success!');
 });
 
-function addFrame(encoder, currGif, max) {
-  var f = "000" + currGif;
+function addFrame(encoder, currGif, max, gif) {
   encoderFramesCurr = currGif;
-  debug('ADDING FRAMES: ' + f.substr(f.length-3));
+  debug('ADDING FRAMES: ' + currGif);
 
-  var tempId = allIds[nextId];
-  var gifName = allIds[nextId] + '.gif';
-  var path = __dirname + '/tmp/' + tempId;
+  //__dirname + '/tmp/_plinco/' + id + '-' + num++ + '.png'
 
+  var gifName = gif + '.gif';
+  var path = __dirname + '/tmp/' + gif;
+
+  console.log(max, __dirname + '/tmp/_plinco/' + gif + '-' + currGif + '.png');
   try {
-    PNG.decode(__dirname + '/tmp/' + tempId + '/' + f.substr(f.length-3) + '.png', function(pixels) {
+    PNG.decode(__dirname + '/tmp/_plinco/' + gif + '-' + currGif + '.png', function(pixels) {
       if (currGif++ < max) {
         encoder.addFrame(pixels);
-        addFrame(encoder, currGif, max);
+        addFrame(encoder, currGif, max, gif);
       } else {
         debug('ENCODER FINISHED!');
         encoder.finish();
 
         var midId = '000' + Math.floor(currGif / 2);
         if (knoxClient) {
-          knoxClient.putFile(__dirname + '/tmp/' + tempId + '/' + midId.substr(midId.length-3) + '.png', tempId + '.png', function(err, res){
+          // knoxClient.putFile(__dirname + '/tmp/' + gif + '/' + midId.substr(midId.length-3) + '.png', gif + '.png', function(err, res){
 
-          });
+          // });
 
           knoxClient.putFile(__dirname + '/tmp/' + gifName, gifName, function(err, res){
             history[history.length - 1]['saved'] = true;
             updateSocketHistory()
 
             debug('FILE PLACED');
-
+            debug(config.POST_TWEET);
             if (config.POST_TWEET) {
-              postTweet(tempId, gifName, path)
+              postTweet(gif, gifName, path)
             } else {
-              removeGifFiles(tempId, gifName, path);
+              removeGifFiles(gif, gifName, path);
             }
 
             
@@ -332,7 +334,7 @@ function addFrame(encoder, currGif, max) {
   } catch(e) {
     console.log(e);
     currGif++;
-    addFrame(encoder, currGif, max);
+    addFrame(encoder, currGif, max, gif);
   }
 }
 
@@ -505,7 +507,7 @@ function serialFakeTest(skip) {
       startDrop();
     }, 1000);
   }
-  var tempPegs = [11, 7, 19, 8];
+  var tempPegs = [11, 7, 19, 8, 26, 32, 38, 45, 51, 58, 64, 71, 77, 84];
   // var tempPegs = [0];
   var currPeg = 0;
   for (var i = 0; i < tempPegs.length; i++) {
@@ -639,3 +641,35 @@ function handlePinCode(data) {
 }
 
 setTimeout(updateSocketHistory, 1000);
+
+function getAnimationFrames(encoder, currGif, max, gif) {
+  phantom.create(function (ph) {
+    ph.createPage(function (page) {
+      page.set('viewportSize', {width:Math.floor(800*(37/58)),height:800})
+        console.log('http://localhost:' + port + '/' + gif);
+        page.open('http://localhost:' + port + '/' + gif, function (status) {
+          if (status !== 'success') {
+              console.log('Unable to access the network!');
+          } else {
+              var num = 0;
+              var interval = setInterval(function() {
+                console.log('render frame ' + num);
+                page.render(__dirname + '/tmp/_plinco/' + gif + '-' + num++ + '.png', function() {
+                  //getBlank(++id);
+                  // ph.exit();
+                });
+
+                if (num === 60) {
+                  clearInterval(interval);
+                  ph.exit();
+                  addFrame(encoder, currGif, max, gif);
+                }
+              
+              }, 100);
+          }
+      });
+    });
+  });
+}
+
+// getBlank('mon');
