@@ -18,10 +18,10 @@ function VoronoiViz(board, puckID) {
   this.fillColors = [];
 
   this.voronoi = d3.geom.voronoi()
-    .clipExtent([[0, 0], [2920, 3000]]);
+    .clipExtent([[1, 1], [board.boardWidth+500, board.boardHeight+500]]);
 
+  console.log(board.boardWidth, board.boardHeight);
   this.colors = [];
-
   this.random = new Math.seedrandom(this.puckID);
 
   var scheme = new ColorScheme;
@@ -118,16 +118,17 @@ function VoronoiViz(board, puckID) {
     }
 
     
-    for (var i = 0, n = this.voronoiData.length; i < n; ++i) {
+    /*for (var i = 0, n = this.voronoiData.length; i < n; ++i) {
       if(i < this.board.numPegs){
-        context.strokeStyle = "rgba(255,255,255,0.15)";
+       // context.lineWidth = 3;
+       // context.strokeStyle = "rgba(255,255,255,0.25)";
       } else {
         var fade = 1 - (distanceTo(this.points[i][0], this.points[i][1], this.centers[i][0], this.centers[i][1]) * 0.01);
         fade = Math.max(fade, 0.35);
         context.strokeStyle = "rgba(255,255,255, " + fade + ")";
       }
       if (draw(this.voronoiData[i])) context.stroke();
-    }
+    }*/
   }
 
   this.destroy = function() {

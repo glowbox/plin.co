@@ -21,6 +21,7 @@ var SCREEN_HEIGHT = isLive ? 1920 : window.innerWidth,
 var DEBUG = false;
 var SHOW_PEGS = false;
 var CALIBRATE_MAPPING = false;
+var useCSSProjectionMapping = true;
 
 var gifs = [];
 var board;
@@ -82,10 +83,17 @@ $(function() {
                                   if (DEBUG) console.log(pegNum);
                                   viz.hit(++runCurr, pegNum);
                                 });
-  viz = chooseViz(puckID);
+  //viz = chooseViz(puckID);
+  viz = new AttractMode(board, 1);
 
   // viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
   
+  if(!useCSSProjectionMapping){
+    initGLMapper();
+  }
+
+  updatePerspectiveTransform();
+
   resizeCanvas();
   animate();
 
@@ -124,7 +132,12 @@ function appSocketOnReset(data){
     Math.seedrandom(puckID);
   }
   viz.destroy();
-  viz = chooseViz(puckID);
+  if(data.id == 0){
+    console.log("Set to attract mode.");
+    viz = new AttractMode(board, 0);
+  } else {
+    viz = chooseViz(puckID);
+  }
   resizeCanvas();
   hasStarted = false;
   // $.post('/play');
@@ -179,7 +192,6 @@ function appKeyDown(e) {
     if(index !== -1) {
       targetPoints[index][0] = mousePosition.x;
       targetPoints[index][1] = mousePosition.y;
-      console.log("update:", targetPoints);
       updatePerspectiveTransform();
     }
   }
@@ -284,6 +296,9 @@ function animate() {
   }
   viz.render();
 
+  renderer.render( scene, camera );
+  
+
   // draw pegs on canvas to help alignment.
   if (CALIBRATE_MAPPING) {
    context.fillStyle = "white";
@@ -296,8 +311,9 @@ function animate() {
    }
   }
 
-
-  renderer.render( scene, camera );
+  if(!useCSSProjectionMapping){
+    renderGLMapper();
+  }
   requestAnimationFrame(animate);
 }
 
@@ -313,6 +329,7 @@ function resizeCanvas() {
 function distanceTo(x1, y1, x2, y2) {
   return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 }
+
 function hexToRgb(hex) {
   var bigint = parseInt(hex, 16);
   var r = (bigint >> 16) & 255;
@@ -326,14 +343,19 @@ var dragging = false;
 var dragIndex = 0;
 
 function updatePerspectiveTransform() {
+
+  if(useCSSProjectionMapping){
+    updateCSSPerspectiveTransform();
+  } else {
+    updateGLPerspectiveTransform();
+  }
+}
+
+function updateCSSPerspectiveTransform() {
   var transform = ["", "-webkit-", "-moz-", "-ms-", "-o-"].reduce(function(p, v) { return v + "transform" in document.body.style ? v : p; }) + "transform";
   
   var sourcePoints = [[0, 0], [SCREEN_WIDTH, 0], [SCREEN_WIDTH, SCREEN_HEIGHT], [0, SCREEN_HEIGHT]];
   
-
-  console.log("Source points: ", sourcePoints);
-  console.log("Target points: ", targetPoints);
-
   for (var a = [], b = [], i = 0, n = sourcePoints.length; i < n; ++i) {
     var s = sourcePoints[i], t = targetPoints[i];
     a.push([s[0], s[1], 1, 0, 0, 0, -s[0] * t[0], -s[1] * t[0]]), b.push(t[0]);
@@ -350,7 +372,6 @@ function updatePerspectiveTransform() {
     return d3.round(x, 6);
   });
  
-  console.log("Update maxtrix: ", matrix);
   $(canvas).css(transform, "matrix3d(" + matrix.join(',') + ")");
   $(canvas).css(transform + "-origin", "0px 0px 0px");
 }
@@ -369,13 +390,18 @@ function onWindowResize() {
 
 function chooseViz(id) {
   if (freeMode && isLive) {
-    if (parseInt(id.toLowerCase(), 36) % 2 == 0) {
+    var idx = parseInt(id.toLowerCase(), 36);
+    var modes = [ParticleEsplode, VoronoiViz];//, AttractMode];
+    var index = idx % modes.length;
+    console.log("New Mode: ", index, id);
+    return new modes[index](board, idx)
+    /*if (parseInt(id.toLowerCase(), 36) % 2 == 0) {
       return new ParticleEsplode(board, parseInt(id.toLowerCase(), 36));
     } else if (parseInt(id.toLowerCase(), 36) % 2 == 1) {
       return new VoronoiViz(board, parseInt(id.toLowerCase(), 36));
     } else {
       return new Bird(board, parseInt(id.toLowerCase(), 36));
-    }
+    }*/
   } else {
     return new VoronoiViz(board, parseInt(id.toLowerCase(), 36));
   }
@@ -395,3 +421,87 @@ function uploadImages() {
 
 
 
+//// GL Mapper - 3d transforms in css are not mip-mapped and look crunchy.
+//// UPDATE: They look 100% the same. :|
+
+var glMapper = {
+};
+
+function updateGLPerspectiveTransform() {
+
+  var sourcePoints = [[0, 0], [board.BOARD_RATIO, 0], [board.BOARD_RATIO, 1], [0, 1]];
+  var destPoints = [];
+
+  for(var i = 0; i < targetPoints.length; i++){
+    destPoints[i] = [
+      (2 *  targetPoints[i][0] / window.innerWidth) - 1,
+      -(2 * targetPoints[i][1] / window.innerHeight) + 1,
+    ];
+  }
+
+  for (var a = [], b = [], i = 0, n = sourcePoints.length; i < n; ++i) {
+    var s = sourcePoints[i], t = destPoints[i];
+    a.push([s[0], s[1], 1, 0, 0, 0, -s[0] * t[0], -s[1] * t[0]]), b.push(t[0]);
+    a.push([0, 0, 0, s[0], s[1], 1, -s[0] * t[1], -s[1] * t[1]]), b.push(t[1]);
+  }
+
+  var X = solve(a, b, true);
+  var xform = new THREE.Matrix4();
+  
+  xform.set( 
+    X[0],  X[1],   0,  X[2], 
+    X[3],  X[4],   0,  X[5], 
+    0,     0,      0,  0,
+    X[6], X[7],   0,  1 );
+
+  // transform the vertices of the plane.
+  for(var i = 0; i < glMapper.geoSourcePoints.length; i++) {
+    glMapper.quad.geometry.vertices[i].copy(glMapper.geoSourcePoints[i]);
+    glMapper.quad.geometry.vertices[i].applyProjection(xform);
+  }
+
+  glMapper.quad.geometry.verticesNeedUpdate = true;
+}
+
+function initGLMapper() {
+  var r = new THREE.WebGLRenderer({antialias:false});
+
+  r.setSize(window.innerWidth, window.innerHeight);
+
+  glMapper.renderer = r;
+
+  $(canvas).hide();
+
+  document.body.appendChild(glMapper.renderer.domElement);
+
+  var canvasTex = new THREE.Texture(canvas);
+  glMapper.source = canvasTex;
+  glMapper.source.anisotropy = 16;
+
+
+  var cam = new THREE.OrthographicCamera( -1, 1, 1, -1, 0.1, 1000 );
+  cam.position.set(0, 0, 1);
+  cam.lookAt( scene.position );
+    
+  var quad = new THREE.Mesh( 
+    new THREE.PlaneGeometry(board.BOARD_RATIO, 1, 40, 40), 
+    new THREE.MeshBasicMaterial({color:0xffffff, side:THREE.BackSide, wireframe:false, map: glMapper.source})
+  );
+  quad.geometry.applyMatrix( new THREE.Matrix4().makeTranslation(board.BOARD_RATIO / 2, 0.5, 0) );
+
+
+  glMapper.geoSourcePoints = [];
+  for(var i = 0; i < quad.geometry.vertices.length; i++){
+    glMapper.geoSourcePoints.push( quad.geometry.vertices[i].clone());
+  }
+  glMapper.quad = quad;
+
+  glMapper.camera = cam;
+  glMapper.scene = new THREE.Scene();
+  glMapper.scene.add(quad)
+}
+
+function renderGLMapper() {
+  glMapper.source.needsUpdate = true;
+  glMapper.renderer.render(glMapper.scene, glMapper.camera);
+}
