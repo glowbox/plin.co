@@ -389,21 +389,13 @@ function onWindowResize() {
 }
 
 function chooseViz(id) {
+  var idx = parseInt(id.toLowerCase(), 36);
   if (freeMode && isLive) {
-    var idx = parseInt(id.toLowerCase(), 36);
-    var modes = [ParticleEsplode, VoronoiViz];//, AttractMode];
+    var modes = [ParticleEsplode, VoronoiViz]; //, BirdsViz];
     var index = idx % modes.length;
-    console.log("New Mode: ", index, id);
     return new modes[index](board, idx)
-    /*if (parseInt(id.toLowerCase(), 36) % 2 == 0) {
-      return new ParticleEsplode(board, parseInt(id.toLowerCase(), 36));
-    } else if (parseInt(id.toLowerCase(), 36) % 2 == 1) {
-      return new VoronoiViz(board, parseInt(id.toLowerCase(), 36));
-    } else {
-      return new Bird(board, parseInt(id.toLowerCase(), 36));
-    }*/
   } else {
-    return new VoronoiViz(board, parseInt(id.toLowerCase(), 36));
+    return new VoronoiViz(board, idx);
   }
 }
 
