@@ -363,11 +363,11 @@ function onWindowResize() {
 
 function chooseViz(id) {
   if (parseInt(id.toLowerCase(), 36) % 3 == 1) {
-    return new VoronoiViz(board, parseInt(id.toLowerCase(), 36));
+    return new ParticleEsplode(board, parseInt(id.toLowerCase(), 36));
   } else if (parseInt(id.toLowerCase(), 36) % 3 == 2) {
     return new VoronoiViz(board, parseInt(id.toLowerCase(), 36));
   } else {
-    return new VoronoiViz(board, parseInt(id.toLowerCase(), 36));
+    return new Bird(board, parseInt(id.toLowerCase(), 36));
   }
 }
 

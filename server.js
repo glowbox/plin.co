@@ -83,7 +83,7 @@ if (!process.env.OFFLINE) {
   }
 }
 
-if (process.env.SERIALPORT1) {
+if (process.env.SERIAL_PORT) {
   var SerialPort = require("serialport").SerialPort;
 
   var serialPort = new SerialPort(process.env.SERIAL_PORT, {
@@ -95,7 +95,7 @@ if (process.env.SERIALPORT1) {
   });
 }
 
-if (process.env.REDISCLOUD_URL && process.env.OFFLINE == 'false') {
+if (process.env.REDISCLOUD_URL) {
   var redis = require('redis');
   var url = require('url');
   var redisURL = url.parse(process.env.REDISCLOUD_URL);
@@ -578,11 +578,10 @@ function handlePinCode(data) {
   
   var raw = data;
   data = data.toString().charCodeAt(0) - 32;
-  
   debug('Received data for peg: ' + pegMap[parseInt(data, 10)]);
   
   if (!isCalibrating) {
-    var pin = parseInt(data, 10);
+    var pin = pegMap[parseInt(data, 10)];
     var errorPin = false;
 
     for (var i = 0; i < serialData.length; i++) {
@@ -602,7 +601,11 @@ function handlePinCode(data) {
       }
     }
 
+    console.log(serialData);
+    console.log(pin, lowest, row, col);
+
     if (serialData.length) {
+      console.log(serialData);
       var lastPin = serialData[serialData.length - 1][1];
       var lastRow = Math.floor(lastPin/6.5);
       var lastCol = Math.floor(lastPin%6.5);
