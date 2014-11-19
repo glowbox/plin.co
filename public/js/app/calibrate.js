@@ -12,40 +12,33 @@ $(function() {
 
   var circles = [];
 
-  currCircle = two.makeCircle(two.width / 2, two.height / 2, 25);
+  currCircle = two.makeCircle(two.width / 2, two.height / 2, 30);
   currCircle.fill = 'none';
   currCircle.stroke = 'orange';
+
   lastCircle = two.makeCircle(two.width / 2, two.height / 2, 30);
-  lastCircle.fill = 'none';
-  lastCircle.stroke = 'green';
+  lastCircle.fill = 'rgba(0,255,0,0.5)';
   two.update();
 
+  currCircle.visible = false;
+  lastCircle.visible = false;
+
   two.bind('update', function(frameCount) {
-    for (var i = 0; i < circles.length; i++) {
-      var c = circles[i];
-      if (c.scale > 0) {
-        c.scale -= .01;
-      } else {
-        c.scale = 0;
-      }
-    }
-    if (currCircle.scale > 0) {
-      currCircle.scale -= .01;
-    } else {
-      currCircle.scale = 1;
-    }
-    if (lastCircle.scale > 0) {
+    currCircle.scale = Math.sin(frameCount * 0.1) * 0.1 + 0.9;
+    if (lastCircle.scale > 0.5) {
       lastCircle.scale -= .005;
-    } else {
-      lastCircle.scale = 1;
     }
   }).play();
 
   board = new Board(true, function(e) {
-    currPeg = $(this).index();
+    currPeg = $(this).attr("data-index");
+    
     var coors = board.getPinCoordinates(currPeg);
+
     currCircle.translation.x = coors.x;
     currCircle.translation.y = coors.y;
+    currCircle.visible = true;
+    $("#selected-peg-index").html(currPeg);
     $.post('/pin-calib/', {'peg': currPeg});
   });
 
@@ -54,6 +47,8 @@ $(function() {
   })
   $('.stop-calib').bind('touch, mousedown', function(e) {
     $.post('/stop-calib/');
+    currCircle.visible = false;
+    lastCircle.visible = false;
   })
 
   var socket = io('http://localhost');
@@ -65,6 +60,8 @@ $(function() {
       var coors = board.getPinCoordinates(parseInt(data.index, 10));
       lastCircle.translation.x = coors.x;
       lastCircle.translation.y = coors.y;
+      lastCircle.scale = 1;
+      lastCircle.visible = true;
     });
     
     socket.on('disconnect', function(){});

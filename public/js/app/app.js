@@ -10,7 +10,7 @@ var camera;
 var scene;
 var renderer;
 
-var BOARD_RATIO = 37/58;
+var BOARD_RATIO = 36/57.25;
 
 
 var SCREEN_HEIGHT = isLive ? 1920 : window.innerWidth,
@@ -307,7 +307,15 @@ function animate() {
    context.strokeRect(1,1,canvas.width-2,canvas.height-2);
    for(var i = 0; i < board.numPegs; i++){
      var coords = board.getPinCoordinates(i);
-      context.fillRect(coords.x-2, coords.y-2, 5, 5);
+     //context.fillEllipse(coords.x-4, coords.y-4, 9, 9);
+     context.beginPath();
+     context.arc(coords.x, coords.y, 8, 0, 2 * Math.PI, false);
+     context.fillStyle = 'white';
+     context.fill();
+
+     context.fillStyle = 'gray';
+     context.font = "24px verdana";
+     context.fillText(i, coords.x + 16, coords.y+8);
    }
   }
 
