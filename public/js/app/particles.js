@@ -22,8 +22,16 @@ Physics.renderer('plinco', function(proto) {
 
       },
 
+      'beforeRender' : function() {
+        console.log("Frame.");
+      },
+
+      //'render' : function(bodies, meta) {
+      //  console.log("rend.");
+      //},
+
       'drawBody' : function(body){
-        console.log(body);
+        //console.log("Draw",body);
       }
     }
   });
@@ -71,7 +79,9 @@ function ParticleEsplode(board, puckID) {
   }); */
 
   
-  this.renderer = Physics.renderer('plinco');
+  this.renderer = Physics.renderer('plinco', {
+
+  });
 
  // console.log(renderer);
   this.hideGeometry = true;
