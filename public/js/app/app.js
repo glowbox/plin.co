@@ -78,13 +78,9 @@ $(function() {
     Two.Resolution = 10;
   }
 
-  board = new Board(SHOW_PEGS, function(e) {
-                                  var pegNum = $(this).index();
-                                  if (DEBUG) console.log(pegNum);
-                                  viz.hit(++runCurr, pegNum);
-                                });
-  //viz = chooseViz(puckID);
-  viz = new AttractMode(board, 1);
+  board = new Board();
+  viz = chooseViz(puckID);
+  //viz = new AttractMode(board, 1);
 
   // viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
   
@@ -236,50 +232,6 @@ function animate() {
     if (diffMain > 0 && diffMain < viz.gifLength) {
       var diffLast = now - lastImageTime;
       if (diffLast > 1000 / viz.framesPerSecond) {
-        
-        /*
-
-        lastImageTime = now;
-        var tempCanvas = document.createElement("canvas"),
-            tempCtx = tempCanvas.getContext("2d");
-
-        var dOffset = ((viz.double && window.devicePixelRatio) > 1 ? 2 : 1);
-        var maxWidth = (board.boardWidth) * dOffset;
-        var maxHeight = (board.boardHeight) * dOffset;
-        var ratio = 37/58;
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
-        var sizeRatio = maxWidth / tempCanvas.width;
-
-
-        gifSize = {
-          'width': tempCanvas.width,
-          'height': tempCanvas.height
-        }
-
-        tempCtx.fillStyle = "black";
-        tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-        tempCtx.drawImage(canvas, 0, 0);
-        // tempCanvas.width = 480;
-        // tempCanvas.height = Math.floor(480 * ratio);
-        contexts.push(tempCanvas);
-        // if (viz.double) {
-        //   var imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-        //   var data = imageData.data;
-
-        //   for(var i = 0; i < data.length; i += 4) {
-        //     // red
-        //     data[i] = 255 - data[i];
-        //     // green
-        //     data[i + 1] = 255 - data[i + 1];
-        //     // blue
-        //     data[i + 2] = 255 - data[i + 2];
-        //   }
-        //   tempCtx.putImageData(imageData, 0, 0);
-        // }
-        
-
-        */
         gifs.push(0);
       }
     } else if (diffMain > viz.gifLength && gifs.length) {
@@ -288,35 +240,45 @@ function animate() {
       gifs = [];
     }
   }
+
   if (runCurr < runStats.length) {
     if (startTime + runStats[runCurr][0] * 1000 < now) {
       viz.hit(runCurr, parseInt(runStats[runCurr][1]));
       runCurr++;
     }
   }
-  viz.render();
+  context.save();
+  var s = canvas.width / board.width;
+   context.scale(s,s);
+  viz.render(context);
+  context.restore();
 
   renderer.render( scene, camera );
   
 
   // draw pegs on canvas to help alignment.
   if (CALIBRATE_MAPPING) {
+   context.save();
+   var f = canvas.width / board.width;
+   context.scale(f,f);
+   context.lineWidth = 0.5;
    context.fillStyle = "white";
    context.strokeStyle = "white";
-   context.strokeRect(0,0,canvas.width,canvas.height);
-   context.strokeRect(1,1,canvas.width-2,canvas.height-2);
+   context.strokeRect(0, 0, board.width, board.height);
+   //context.strokeRect(1, 1, board.widt-2,canvas.height-2);
    for(var i = 0; i < board.numPegs; i++){
      var coords = board.getPinCoordinates(i);
      //context.fillEllipse(coords.x-4, coords.y-4, 9, 9);
      context.beginPath();
-     context.arc(coords.x, coords.y, 8, 0, 2 * Math.PI, false);
+     context.arc(coords.x, coords.y, 0.25, 0, 2 * Math.PI, false);
      context.fillStyle = 'white';
      context.fill();
 
      context.fillStyle = 'gray';
-     context.font = "24px verdana";
-     context.fillText(i, coords.x + 16, coords.y+8);
+     context.font = "0.6pt verdana";
+     context.fillText(i, coords.x+0.5, coords.y+0.25);
    }
+   context.restore();
   }
 
   if(!useCSSProjectionMapping){
@@ -351,6 +313,9 @@ var dragging = false;
 var dragIndex = 0;
 
 function updatePerspectiveTransform() {
+  if(!isLive){
+    return;
+  }
 
   if(useCSSProjectionMapping){
     updateCSSPerspectiveTransform();
