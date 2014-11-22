@@ -67,7 +67,7 @@ var nextId = 0;
 var serialData = [];
 var isRunning = false;
 var pegMap = {};
-var projectionTargetPoints = "[[0,0],[505,0],[505,800],[0,800]]";
+
 var isCalibrating = false;
 var currCalibrationPin = -1;
 
@@ -110,14 +110,6 @@ if (process.env.REDISCLOUD_URL) {
       pegMap = data['map'];
     }
   });
-
-  // client.get('projectionTargetPoints', function (e, r) {
-  //   if (r) {
-  //     projectionTargetPoints = r;
-  //   }
-  // });
-
-
 
   // var m = {};
   // for (var i = 0; i < 85; i++) {
@@ -182,11 +174,11 @@ app.get('/', function(req, res){
 
 app.get('/live/test/', function(req, res){
   serialFakeTest();
-  return res.render('app.mustache', {'projectionTargetPoints' : projectionTargetPoints, 'live': true, 'id': allIds[nextId], 'js': 'app'});
+  return res.render('app.mustache', {'live': true, 'id': allIds[nextId], 'js': 'app'});
 });
 
 app.get('/live/', function(req, res){
-  return res.render('app.mustache', {'projectionTargetPoints' : projectionTargetPoints, 'live': true, 'js': 'app'});
+  return res.render('app.mustache', {'live': true, 'js': 'app'});
 });
 
 function isCallerMobile(req) {
@@ -278,6 +270,7 @@ app.post('/upload/', function(req, res) {
     encoder.setDelay(1000/req.body.fps);  // frame delay in ms
     encoder.setQuality(10);
     encoderFrames = req.body.gifLength/1000 * req.body.fps;
+    
     getAnimationFrames(encoder, 0, encoderFrames, allIds[nextId], 1000/req.body.fps);
 
     endDrop();
@@ -347,7 +340,7 @@ app.get(/^\/([a-z]{3})$/, function(req, res) {
         if (isCallerMobile(req)) {
           getGif(req, res);
         } else {
-          return res.render('app.mustache', {id: id, run: data.runs[0], 'js': 'app', 'projectionTargetPoints' : projectionTargetPoints});
+          return res.render('app.mustache', {id: id, run: data.runs[0], 'js': 'app',});
         }
       } else {
         return res.render('404.mustache');
@@ -365,7 +358,7 @@ app.get('/render/:run_id', function(req, res) {
       if (r) {
         var data = JSON.parse(r);
         console.log(data);
-        return res.render('app.mustache', {playback: true, id: req.params.run_id, run: data.runs[0], 'js': 'app', 'projectionTargetPoints' : projectionTargetPoints});
+        return res.render('app.mustache', {playback: true, id: req.params.run_id, run: data.runs[0], 'js': 'app'});
       } else {
         return res.render('404.mustache');
       }
@@ -408,16 +401,6 @@ app.post('/play', function(req, res) {
   serialFakeTest(req.body.skip);
   return res.send('success!');
 });
-
-app.post('/set-projection-points/', function(req, res) {
-  var targets = req.body.targetPoints;
-  projectionTargetPoints = targets;
-  if (client) {
-    console.log("Saving projection mapping points..");
-    client.set('projectionTargetPoints', targets);
-  }
-  return res.send('success!');
-})
 
 app.post('/end-run/', function(req, res) {
   if (isRunning) {
@@ -598,11 +581,10 @@ function serialReceived(data, force){
 
 
 function handlePinCode(data, force) {
-  debug('RAW CODE: ' + data);
   
   var raw = data;
   data = data.toString().charCodeAt(0) - 32;
-  debug('Received data for peg: ' + pegMap[parseInt(data, 10)]);
+  debug('Pin: ' + pegMap[parseInt(data, 10)] + " (raw code: " + data + ")");
   
   if (!isCalibrating) {
     var pin = pegMap[parseInt(data, 10)];
@@ -625,29 +607,32 @@ function handlePinCode(data, force) {
       }
     }
 
-    if (serialData.length) {
-      var lastPin = serialData[serialData.length - 1][1];
-      var lastRow = Math.floor(lastPin/6.5);
-      var lastCol = Math.floor(lastPin%6.5);
-      if (lowest > 1) {
-        if (Math.abs(lastCol - col) - Math.abs(lastRow - row) >= 3) {
-          debug('TOO FAR AWAY');
-          errorPin = true;
-        } else if (lowest - row >= 2) {
-          debug('HIGHER THAN THE LOWEST (MOXY FRUVOUS)');
-          errorPin = true;
+    var filterPins = false;
+
+    if(filterPins){
+      if (serialData.length) {
+        var lastPin = serialData[serialData.length - 1][1];
+        var lastRow = Math.floor(lastPin/6.5);
+        var lastCol = Math.floor(lastPin%6.5);
+        if (lowest > 1) {
+          if (Math.abs(lastCol - col) - Math.abs(lastRow - row) >= 3) {
+            debug('TOO FAR AWAY');
+            errorPin = true;
+          } else if (lowest - row >= 2) {
+            debug('HIGHER THAN THE LOWEST (MOXY FRUVOUS)');
+            errorPin = true;
+          }
+        } else {
+
         }
       } else {
-
-      }
-    } else {
-      if (row > 1) {
-        debug('STARTED TOO FAR DOWN');
-        errorPin = true;
+        if (row > 1) {
+          debug('STARTED TOO FAR DOWN');
+          errorPin = true;
+        }
       }
     }
-
-    var filterPins = false;
+    
     if (!filterPins || !errorPin) {
       if (isRunning || force) {
         serialData.push([new Date().getTime(), pegMap[parseInt(data, 10)]]);

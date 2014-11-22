@@ -43,6 +43,10 @@ var runIds = [];
 var freeMode = true;
 var mousePosition = {x:0, y:0};
 
+// default values, configuration will be loaded from local storage later.
+var targetPoints = [[0,0],[505,0],[505,800],[0,800]];
+
+
 $(function() {
   Math.seedrandom(puckID);
 
@@ -80,6 +84,7 @@ $(function() {
     initGLMapper();
   }
 
+  loadProjectionConfiguration();
   updatePerspectiveTransform();
 
   previousTime = new Date().getTime();
@@ -152,11 +157,25 @@ function appSocketOnPeg(data){
   }
 }
 
+function saveProjectionConfiguration() {
+  if(Modernizr.localstorage){
+    localStorage.setItem("plinco.targetPoints", JSON.stringify(targetPoints));
+  }
+}
+
+function loadProjectionConfiguration() {
+ if(Modernizr.localstorage){
+    if(localStorage.getItem("plinco.targetPoints")){
+      targetPoints = JSON.parse(localStorage.getItem("plinco.targetPoints"));
+    }
+  } 
+}
+
 function appKeyDown(e) {
   // Space bar or tilde
   if ((e.keyCode === 32) || (e.keyCode === 192)) {
     if(CALIBRATE_MAPPING){
-      $.post('/set-projection-points/', {'targetPoints': JSON.stringify(targetPoints)});
+      saveProjectionConfiguration();
     }
     CALIBRATE_MAPPING = !CALIBRATE_MAPPING;
   }
