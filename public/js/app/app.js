@@ -3,9 +3,12 @@ var canvas;
 var context;
 var viz;
 var runCurr = 0;
-var startTime;
-var lastImageTime;
 
+var ellapsedTime = 0;
+
+var previousTime = 0;
+var frameAccumulator = 0;
+var playbackTime = 0;
 var camera;
 var scene;
 var renderer;
@@ -13,10 +16,12 @@ var renderer;
 var BOARD_RATIO = 36/57.25;
 
 
-var SCREEN_HEIGHT = isLive ? 1920 : window.innerWidth,
-    SCREEN_WIDTH = isLive ? (SCREEN_HEIGHT * BOARD_RATIO) : window.innerHeight,
-      SCREEN_WIDTH_HALF = SCREEN_WIDTH  / 2,
-      SCREEN_HEIGHT_HALF = SCREEN_HEIGHT / 2;
+// Height of the canvas to render board content.
+var renderSize = {
+  width: 0,
+  height: 0
+};
+updateRenderSize();
 
 var DEBUG = false;
 var SHOW_PEGS = false;
@@ -37,7 +42,6 @@ var gifSize = {};
 var runIds = [];
 
 var freeMode = true;
-
 var mousePosition = {x:0,y:0};
 
 $(function() {
@@ -48,15 +52,15 @@ $(function() {
     socket.on('connect', appSocketOnConnect);
   }
 
-  camera = new THREE.PerspectiveCamera( 75, SCREEN_WIDTH / SCREEN_HEIGHT, 1, 10000 );
+  camera = new THREE.PerspectiveCamera( 75, BOARD_RATIO, 1, 10000 );
   camera.position.z = 450;
 
   scene = new THREE.Scene();
 
   renderer = new THREE.CanvasRenderer();
   renderer.setClearColor( 0x000000 );
-  renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
-  //console.log(SCREEN_WIDTH, SCREEN_HEIGHT);
+  renderer.setSize( renderSize.width, renderSize.height );
+
   document.body.appendChild( renderer.domElement );
 
   canvas = document.getElementsByTagName('canvas')[0];
@@ -65,23 +69,10 @@ $(function() {
 
   onWindowResize();
   
-  startTime = new Date().getTime() + 1000;
-  lastImageTime = 0;
-
-  if (SHOW_PEGS) {
-    two = new Two({
-      type: Two.Types['svg'],
-      width:SCREEN_WIDTH,
-      height:SCREEN_HEIGHT
-    }).appendTo(document.body);
-
-    Two.Resolution = 10;
-  }
-
   board = new Board();
   viz = chooseViz(puckID);
-  //viz = new AttractMode(board, 1);
 
+  //viz = new AttractMode(board, 1);
   // viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
   
   if(!useCSSProjectionMapping){
@@ -90,16 +81,20 @@ $(function() {
 
   updatePerspectiveTransform();
 
-  resizeCanvas();
-  animate();
-
+  previousTime = new Date().getTime();
+  
   $(window).bind('keydown', appKeyDown);
   $(window).bind('mousedown', appMouseDown);
   $(window).bind('mouseup', appMouseUp);
   $(window).bind('mousemove', appMouseMove);
+  $(window).bind('resize', onWindowResize);
   
   if(isLive){
     updatePerspectiveTransform();
+  }
+
+  if(!isPlayback){
+    onAnimationFrame();
   }
 });
 
@@ -149,7 +144,7 @@ function appSocketOnPeg(data){
     lastPeg = parseInt(data.index, 10);
     if (!hasStarted) {
       hasStarted = true;
-      startTime = new Date().getTime();
+      ellapsedTime = 0;
       if (DEBUG) console.log('reset start Time');
     }
     viz.hit(0, parseInt(data.index, 10));
@@ -157,7 +152,8 @@ function appSocketOnPeg(data){
 }
 
 function appKeyDown(e) {
-  if (e.keyCode === 32) {
+  // Space bar or tilde
+  if ((e.keyCode === 32) || (e.keyCode === 192)) {
     if(CALIBRATE_MAPPING){
       $.post('/set-projection-points/', {'targetPoints': JSON.stringify(targetPoints)});
     }
@@ -225,76 +221,108 @@ function appMouseDown(e) {
   }
 }
 
-function animate() {
+function onAnimationFrame(){
+  
   var now = new Date().getTime();
-  if (live && hasStarted && !freeMode) {
-    var diffMain = now - startTime;
-    if (diffMain > 0 && diffMain < viz.gifLength) {
-      var diffLast = now - lastImageTime;
-      if (diffLast > 1000 / viz.framesPerSecond) {
-        gifs.push(0);
-      }
-    } else if (diffMain > viz.gifLength && gifs.length) {
-      uploadImages();
-      if (DEBUG) console.log('done');
-      gifs = [];
-    }
+  var delta = now - previousTime;
+  previousTime = now;
+  frameAccumulator += delta;
+
+  // Fixed time interval.. accumulate time until we exceed the frame rate,
+  // then trigger rendering in 16 ms increments.
+  while(frameAccumulator > 16){
+    animate(16);
+    frameAccumulator -= 16;
   }
 
+  window.requestAnimationFrame(onAnimationFrame);
+}
+
+function animate(deltaTime) {
+  
+  // handle playback of runs
   if (runCurr < runStats.length) {
-    if (startTime + runStats[runCurr][0] * 1000 < now) {
+    playbackTime += deltaTime;
+    if (runStats[runCurr][0] * 1000 < playbackTime) {
       viz.hit(runCurr, parseInt(runStats[runCurr][1]));
       runCurr++;
     }
   }
+
+  // If this is a tracked run, wait until it's done then notify the server.
+  if (live && hasStarted && !freeMode) {
+    ellapsedTime += deltaTime;
+    if(ellapsedTime > viz.gifLength) {
+      uploadImages();
+      hasStarted = false;
+    }
+  }
+
+  // render the currrent visualizer
   context.save();
   var s = canvas.width / board.width;
-   context.scale(s,s);
-  viz.render(context);
+  context.scale(s,s);
+  viz.render(context, deltaTime);
   context.restore();
 
   renderer.render( scene, camera );
-  
 
-  // draw pegs on canvas to help alignment.
-  if (CALIBRATE_MAPPING) {
-   context.save();
-   var f = canvas.width / board.width;
-   context.scale(f,f);
-   context.lineWidth = 0.5;
-   context.fillStyle = "white";
-   context.strokeStyle = "white";
-   context.strokeRect(0, 0, board.width, board.height);
-   //context.strokeRect(1, 1, board.widt-2,canvas.height-2);
-   for(var i = 0; i < board.numPegs; i++){
-     var coords = board.getPinCoordinates(i);
-     //context.fillEllipse(coords.x-4, coords.y-4, 9, 9);
-     context.beginPath();
-     context.arc(coords.x, coords.y, 0.25, 0, 2 * Math.PI, false);
-     context.fillStyle = 'white';
-     context.fill();
-
-     context.fillStyle = 'gray';
-     context.font = "0.6pt verdana";
-     context.fillText(i, coords.x+0.5, coords.y+0.25);
-   }
-   context.restore();
+  // render calibration overlay
+  if(isLive){
+    updateCalibration();
   }
-
-  if(!useCSSProjectionMapping){
-    renderGLMapper();
-  }
-  requestAnimationFrame(animate);
 }
+
+function chooseViz(id) {
+  var idx = parseInt(id.toLowerCase(), 36);
+ // if (isLive) {
+    var modes = [ParticleEsplode, VoronoiViz]; //, BirdsViz];
+    var index = idx % modes.length;
+    return new modes[index](board, idx)
+ // } else {
+ //   return new VoronoiViz(board, idx);
+ // }
+}
+
+function uploadImages() {
+  $.post('/upload/', {'num': 0, 'type': 'image', 'fps': viz.framesPerSecond, 'gifLength': viz.gifLength});
+}
+
+function updateRenderSize(){
+  if(isLive) {
+    // Make the canvas at least as tall as the display for live mode.
+    renderSize.height = screen.height;
+    renderSize.width = renderSize.height * BOARD_RATIO;
+  } else {
+    // Figure out the ideal dimension to fill the window without cropping.
+    if(window.innerWidth / window.innerHeight < BOARD_RATIO) {
+      renderSize.width = window.innerWidth;
+      renderSize.height = renderSize.width / BOARD_RATIO;
+    } else {
+      renderSize.height = window.innerHeight;
+      renderSize.width = renderSize.height * BOARD_RATIO;
+    }
+  }
+}
+
 
 function resizeCanvas() {
-  canvas.width = isLive ? SCREEN_WIDTH : window.innerWidth;
-  canvas.height = isLive ? SCREEN_HEIGHT : window.innerHeight;
-  if (viz.double && !isLive) {
-    canvas.width = canvas.width * ((viz.double && window.devicePixelRatio) > 1 ? 2 : 1);
-    canvas.height = canvas.height * ((viz.double && window.devicePixelRatio) > 1 ? 2 : 1);
-  }
+  canvas.width = renderSize.width;
+  canvas.height = renderSize.height;
+
+  $(canvas).css({width: renderSize.width, height:renderSize.height});
 }
+
+function onWindowResize() {
+
+  updateRenderSize();
+  resizeCanvas();
+
+  camera.aspect = BOARD_RATIO;
+  camera.updateProjectionMatrix();
+  renderer.setSize( renderSize.width, renderSize.height );
+}
+
 
 function distanceTo(x1, y1, x2, y2) {
   return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
@@ -309,8 +337,46 @@ function hexToRgb(hex) {
   return { r: r, g: g, b: b };
 }
 
+
+
 var dragging = false;
 var dragIndex = 0;
+
+
+function updateCalibration() {
+  // draw pegs on canvas to help alignment.
+
+  if (CALIBRATE_MAPPING) {
+  
+    context.save();
+  
+    var f = canvas.width / board.width;
+    context.scale(f,f);
+    context.lineWidth = 0.5;
+    context.fillStyle = "white";
+    context.strokeStyle = "white";
+    context.strokeRect(0, 0, board.width, board.height);
+  
+    for(var i = 0; i < board.numPegs; i++){
+      var coords = board.getPinCoordinates(i);
+  
+      context.beginPath();
+      context.arc(coords.x, coords.y, 0.25, 0, 2 * Math.PI, false);
+      context.fillStyle = 'white';
+      context.fill();
+
+      context.fillStyle = 'gray';
+      context.font = "0.6pt verdana";
+      context.fillText(i, coords.x+0.5, coords.y+0.25);
+    }
+
+    context.restore();
+  }
+
+  if(!useCSSProjectionMapping){
+    renderGLMapper();
+  }
+}
 
 function updatePerspectiveTransform() {
   if(!isLive){
@@ -327,7 +393,7 @@ function updatePerspectiveTransform() {
 function updateCSSPerspectiveTransform() {
   var transform = ["", "-webkit-", "-moz-", "-ms-", "-o-"].reduce(function(p, v) { return v + "transform" in document.body.style ? v : p; }) + "transform";
   
-  var sourcePoints = [[0, 0], [SCREEN_WIDTH, 0], [SCREEN_WIDTH, SCREEN_HEIGHT], [0, SCREEN_HEIGHT]];
+  var sourcePoints = [[0, 0], [renderSize.width, 0], [renderSize.width, renderSize.height], [0, renderSize.height]];
   
   for (var a = [], b = [], i = 0, n = sourcePoints.length; i < n; ++i) {
     var s = sourcePoints[i], t = targetPoints[i];
@@ -347,41 +413,6 @@ function updateCSSPerspectiveTransform() {
  
   $(canvas).css(transform, "matrix3d(" + matrix.join(',') + ")");
   $(canvas).css(transform + "-origin", "0px 0px 0px");
-}
-
-function onWindowResize() {
-  if(isLive) {
-    camera.aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
-    camera.updateProjectionMatrix();
-    renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
-  } else {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize( window.innerWidth, window.innerHeight );
-  }
-}
-
-function chooseViz(id) {
-  var idx = parseInt(id.toLowerCase(), 36);
-  if (freeMode && isLive) {
-    var modes = [ParticleEsplode, VoronoiViz]; //, BirdsViz];
-    var index = idx % modes.length;
-    return new modes[index](board, idx)
-  } else {
-    return new VoronoiViz(board, idx);
-  }
-}
-
-function uploadImages() {
-  // $.post('/upload/', {'type': 'done', 'fps': viz.framesPerSecond});
-  var pngs = [];
-  for (var i = 0; i < contexts.length; i++) {
-    var img = contexts[i].toDataURL("image/png");
-    pngs.push(img);
-  }
-  // worker.postMessage(passData);
-  $.post('/upload/', {'num': 0, 'type': 'image', 'fps': viz.framesPerSecond, 'gifLength': viz.gifLength});
-  contexts = [];
 }
 
 

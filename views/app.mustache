@@ -4,6 +4,7 @@
   var runStatsRaw = '{{run}}';
   var live = '{{live}}';
   var isLive = (live == 'true');
+  var isPlayback = '{{playback}}' == 'true' ? true : false;
   var targetPoints = {{projectionTargetPoints}};
   var runStats = [];
   if (runStatsRaw) {
