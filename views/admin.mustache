@@ -43,21 +43,23 @@
       <button type="button" class="btn btn-default btn-lg btn-danger end-run">
         Complete Run
       </button>
-      <div class="btn-group">
-        <button type="button" class="btn btn-default free-mode" data-mode="0">Attract</button>
-        <button type="button" class="btn btn-default free-mode" data-mode="2">Particles</button>
-        <button type="button" class="btn btn-default free-mode" data-mode="3">Voronoi</button>
-      <!--  <button type="button" class="btn btn-default free-mode" data-mode="4">Birds</button> -->
+      <hr>
+      <h2>Set Current Vis</h2>
+      <div class="btn-group" id="visualizer-list">
       </div>
       <h2>Add user</h2>
       <div class="input-group">
         <span class="input-group-addon">@</span>
         <input type="text" class="form-control username" placeholder="Username">
       </div>
+      <div class="input-group">
+        Visualization:
+        <select name="visualization" id="visualization"></select>
+      </div>
       <h2>Queue</h2>
       <ul class="queue">
         {{#queue}}
-          <li>{{.}} <a href="#" data-username="{{.}}">Remove</a></li></li>
+          <li>{{username}} <a href="#" data-username="{{username}}">Remove</a></li></li>
         {{/queue}}
       </ul>
     </div>

@@ -46,6 +46,25 @@ var mousePosition = {x:0, y:0};
 // default values, configuration will be loaded from local storage later.
 var targetPoints = [[0,0],[505,0],[505,800],[0,800]];
 
+// List of named vizualizers and their constructors.
+var visualizers = {
+  'attract-mode' :  {
+    'name' : 'Attract',
+    'constructor' : AttractMode
+  },
+  'birds' : {
+    'name' : 'Birds',
+    'constructor' : BirdsViz
+  },
+  'voronoi' :  {
+    'name' : 'Voronoi',
+    'constructor' : VoronoiViz
+  },
+  'particles' :  {
+    'name' : 'Particles',
+    'constructor' : ParticleEsplode
+  }
+};
 
 $(function() {
   Math.seedrandom(puckID);
@@ -75,7 +94,7 @@ $(function() {
   
 
   board = new Board();
-  viz = chooseViz(puckID);
+  viz = createVisualizer(visualizer);
 
   //viz = new AttractMode(board, 1);
   // viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
@@ -121,23 +140,32 @@ function appSocketOnEnd(data){
 }
 
 function appSocketOnReset(data){
+  console.log(data);
   freeMode = data.freemode;
   puckID = data.id;
+  var visName = data.visualizer;
+
   if (freeMode) {
     Math.seedrandom(Math.random());
   } else {
     Math.seedrandom(puckID);
   }
+  
   viz.destroy();
-  if(data.id == 0){
-    console.log("Set to attract mode.");
-    viz = new AttractMode(board, 0);
-  } else {
-    viz = chooseViz(puckID);
-  }
+  viz = createVisualizer(visName);
+
   resizeCanvas();
   hasStarted = false;
   // $.post('/play');
+}
+
+function createVisualizer(name){
+  console.log("CREATE: " + name);
+  if(visualizers[name]) {
+    return new visualizers[name].constructor(board, puckID);
+  } else {
+    return new visualizers["attract-mode"].constructor(board, puckID);
+  }
 }
 
 function appSocketOnStart(data){
@@ -296,16 +324,6 @@ function animate(deltaTime) {
     updateCalibration();
   }
 }
-
-// TODO: store viz choices as a string in the run data.
-function chooseViz(id) {
-  var modes = [ParticleEsplode, VoronoiViz];//, BirdsViz];
-
-  var idx = parseInt(id.toLowerCase(), 36);
-  var index = idx % modes.length;
-
-  return new modes[index](board, idx)
- }
 
 function onRunComplete() {
   $.post('/upload/', {'num': 0, 'type': 'image', 'fps': viz.framesPerSecond, 'gifLength': viz.gifLength});

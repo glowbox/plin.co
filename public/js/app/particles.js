@@ -109,13 +109,14 @@ function ParticleEsplode(board, puckID) {
   
   Math.random = new Math.seedrandom(puckID);
 
-  this.physicsTime = 100000; // fake "time" for physics..
+  this.physicsTime = 100000; // fake "time" for physics
   var self = this;
   this.board = board;
   this.puckID = puckID;
 
   this.gifLength = 7000;
   this.framesPerSecond = 10;
+  this.name = "particles";
 
   var worldScale = 10;
   this.useDefaultRenderer = false;
@@ -131,12 +132,7 @@ function ParticleEsplode(board, puckID) {
     .add_complement(false)
     .variation('light')
     .web_safe(false);
-  /*var colorValues = scheme.colors();
-  this.colors = [];
-  for (var i = 0; i < colorValues.length; i++) {
-    var rgb = hexToRgb(colorValues[i]);
-    this.colors.push([ rgb.r, rgb.g, rgb.b ]);
-  }*/
+
   this.colors = scheme.colors();
 
   this.renderer = Physics.renderer('plinco', {

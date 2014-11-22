@@ -6,6 +6,7 @@ function VoronoiViz(board, puckID) {
 
   this.gifLength = 8000;
   this.framesPerSecond = 5;
+  this.name = "voronoi";
 
   this.lastHit = {x: -1, y: -1};
   this.isFirst = true;

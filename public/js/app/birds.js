@@ -323,11 +323,7 @@ function BirdsViz(board, puckID) {
 
   this.gifLength = 12000;
   this.framesPerSecond = 4;
-
-  /*var SCREEN_WIDTH = isLive ? 800 * BOARD_RATIO : window.innerWidth,
-  SCREEN_HEIGHT = isLive ? 800 : window.innerHeight,
-  SCREEN_WIDTH_HALF = SCREEN_WIDTH  / 2,
-  SCREEN_HEIGHT_HALF = SCREEN_HEIGHT / 2;*/
+  this.name = "birds";
   
   this.birds = [];
   var bird;

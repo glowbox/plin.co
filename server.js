@@ -283,7 +283,7 @@ app.post('/upload/', function(req, res) {
 
 function addFrame(encoder, currGif, max, gif) {
   encoderFramesCurr = currGif;
-  debug('ADDING FRAMES: ' + currGif);
+ // debug('ADDING FRAMES: ' + currGif);
 
   //__dirname + '/tmp/_plinco/' + id + '-' + num++ + '.png'
 
@@ -291,7 +291,10 @@ function addFrame(encoder, currGif, max, gif) {
   var path = __dirname + '/tmp/' + gif;
 
   try {
-    PNG.decode(__dirname + '/tmp/_plinco/' + gif + '-' + currGif + '.png', function(pixels) {
+    var tmpFolder = __dirname + '/tmp/' + gif + '/';
+    var imagePath = tmpFolder + gif + '-' + currGif + '.png';
+    console.log("Encoding frame: " + imagePath);
+    PNG.decode(imagePath, function(pixels) {
       if (currGif++ < max - 1) {
         encoder.addFrame(pixels);
         addFrame(encoder, currGif, max, gif);
@@ -340,7 +343,8 @@ app.get(/^\/([a-z]{3})$/, function(req, res) {
         if (isCallerMobile(req)) {
           getGif(req, res);
         } else {
-          return res.render('app.mustache', {id: id, run: data.runs[0], 'js': 'app',});
+          var vizId = (data.visualizer ? data.visualizer : '');
+          return res.render('app.mustache', {id: id, run: data.runs[0], 'js': 'app', 'visualizer' : vizId});
         }
       } else {
         return res.render('404.mustache');
@@ -358,7 +362,8 @@ app.get('/render/:run_id', function(req, res) {
       if (r) {
         var data = JSON.parse(r);
         console.log(data);
-        return res.render('app.mustache', {playback: true, id: req.params.run_id, run: data.runs[0], 'js': 'app'});
+        var vizId = (data.visualizer ? data.visualizer : '');
+        return res.render('app.mustache', {playback: true, id: req.params.run_id, run: data.runs[0], 'js': 'app', 'visualizer' : vizId });
       } else {
         return res.render('404.mustache');
       }
@@ -419,7 +424,7 @@ app.post('/free-run/', function(req, res) {
   }
   endDrop();
   isRunning = false;
-  io.emit('reset', {'id': req.body.mode, 'freemode': true});
+  io.emit('reset', {'id': 0, 'visualizer': req.body.visualizer, 'freemode': true});
   return res.send('success!');
 });
 
@@ -454,51 +459,80 @@ app.post('/peg-hit', function(req, res) {
 });
 
 app.post('/add-user/', function(req, res) {
-  queue.push(req.body.username);
-  var queueJSON = {
-    'queue': queue
-  }
-  if (client) {
-    client.set('queue', JSON.stringify(queueJSON), redis.print);
-  }
-  io.emit('queue', queueJSON);
+  addPlayer(req.body.username, req.body.vizualizer);
   return res.send('success!');
 });
 
 app.post('/remove-user/', function(req, res) {
-  var user = queue.splice(queue.indexOf(req.body.username), 1);
-  var queueJSON = {
-    'queue': queue
-  }
-  if (client) {
-    client.set('queue', JSON.stringify(queueJSON), redis.print);
-  }
-  io.emit('queue', {'queue': queue});
+  removePlayer(req.body.username);
   updateSocketHistory();
   return res.send('success!');
 });
 
 app.post('/next-user/', function(req, res) {
-  var user = queue.splice(0, 1);
+  var queueItem = getNextPlayer(req.body.username, req.body.visualizer);
+  
+  console.log("Starting drop for user: ", queueItem);
+  startDrop();
+
+  history.push({
+    'twitter': queueItem.username,
+    'id': allIds[nextId],
+    'complete': 'progress',
+    'visualizer': queueItem.visualizer
+  })
+  io.emit('reset', {'id': allIds[nextId], 'visualizer': queueItem.visualizer, 'freemode': false});
+  updateSocketHistory();
+
+  return res.send('success!');
+});
+
+
+function removePlayer(username){
+  for(var i = 0; i < queue.length; i++){
+    if(queue[i].username == username){
+      queue.splice(i, 1);
+      break;
+    }
+  }
+  onQueueUpdate();
+}
+
+
+function addPlayer(username, visualizer){
+  queue.push({
+    'username' : username,
+    'visualizer' : visualizer
+  });
+  onQueueUpdate();
+}
+
+
+function getNextPlayer(username, visualizer) {
+  var queueItem = {};
+
+  if(queue.length <= 0) {
+    queueItem.username = (username != null) ? username : '';
+    queueItem.visualizer = (visualizer != null) ? visualizer : '';
+  } else {
+    queueItem = queue.splice(0, 1)[0];  
+    onQueueUpdate();
+  }
+  
+  return queueItem;
+}
+
+
+function onQueueUpdate() {
   var queueJSON = {
     'queue': queue
   }
-  
-  startDrop();
-
   if (client) {
     client.set('queue', JSON.stringify(queueJSON), redis.print);
   }
-  history.push({
-    'twitter': user.length ? user[0] : '',
-    'id': allIds[nextId],
-    'complete': 'progress'
-  })
-  io.emit('reset', {'id': allIds[nextId], 'freemode': false});
   io.emit('queue', {'queue': queue});
-  updateSocketHistory();
-  return res.send('success!');
-});
+}
+
 
 function serialFakeTest(skip) {
   if (skip) {
@@ -528,7 +562,9 @@ function serialFakeTest(skip) {
 function startDrop() {
   debug('Starting record for: ' + allIds[nextId]);
  
-  fs.mkdir('tmp/' + allIds[nextId] + '/');
+  fs.mkdir('tmp/' + allIds[nextId] + '/', function(err){
+  });
+
   io.emit('start', {'id': allIds[nextId]});
   serialData = [];
   isRunning = true;
@@ -537,6 +573,7 @@ function startDrop() {
 
 function endDrop() {
   debug('Setting data for: ' + allIds[nextId]);
+  
   if (serialData.length) {
     var startTime = serialData[0][0];
     var tempId = nextId;
@@ -548,9 +585,11 @@ function endDrop() {
         serialData
       ],
       twitter: history.length ? history[history.length - 1]['twitter'] : '',
-      time: new Date().getTime()
-    }
+      time: new Date().getTime(),
+      visualizer: history.length ? history[history.length - 1]['visualizer'] : ''
+    };
     if (client) {
+      console.log("Saving record: ", dataComplete);
       client.set(allIds[nextId], JSON.stringify(dataComplete), redis.print);
     }
     serialData = [];
@@ -662,6 +701,8 @@ function getAnimationFrames(encoder, currGif, max, gif, speed) {
             var renderStart = new Date().getTime();
             var finished = false;
             var accum = 0;
+            var tmpFolder = __dirname + '/tmp/' + gif + '/';
+
             for(var num = 0; num < max; num++) {
               
               // Run the animation logic as fast as possible without skipping frames.
@@ -674,21 +715,21 @@ function getAnimationFrames(encoder, currGif, max, gif, speed) {
 
               accum -= speed;
               
-              debug('render frame ' + num);
-              page.render(__dirname + '/tmp/_plinco/' + gif + '-' + num + '.png');
+              debug('Render frame: ' + num);
+              page.render(tmpFolder + gif + '-' + num + '.png');
             }
 
             var waiting = true;
-            var lastFile = __dirname + '/tmp/_plinco/' + gif + '-' + (max-1) + '.png';
+            var lastFile = tmpFolder + gif + '-' + (max-1) + '.png';
             
             var ellapsed = new Date().getTime() - renderStart;
 
             console.log("Rendered in " + ellapsed + " milliseconds, waiting for PNG to exist: " + lastFile);
 
+            // TODO: there's probably a better way to do this.
             while(waiting){
               if(fs.existsSync(lastFile)){
                 var stats = fs.statSync(lastFile);
-                console.log(stats);
                 waiting = false;
               }
             }
