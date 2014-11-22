@@ -18,9 +18,9 @@ function VoronoiViz(board, puckID) {
   this.fillColors = [];
 
   this.voronoi = d3.geom.voronoi()
-    .clipExtent([[1, 1], [board.boardWidth+500, board.boardHeight+500]]);
+    .clipExtent([[1, 1], [board.width+10, board.height+10]]);
 
-  console.log(board.boardWidth, board.boardHeight);
+  console.log(board.width, board.height);
   this.colors = [];
   this.random = new Math.seedrandom(this.puckID);
 
@@ -50,6 +50,7 @@ function VoronoiViz(board, puckID) {
   canvas.className = '';
 
   this.hit = function(runCurr, index) {
+
     var coor = board.getPinCoordinates(index);
 
     if (this.lastHit.x == -1 && this.lastHit.y == -1) {
@@ -59,17 +60,23 @@ function VoronoiViz(board, puckID) {
     var deltaY = (coor.y - this.lastHit.y);
 
     var count = this.random() * 10 + 8;
+    var spawnRadius = 1;
     for(var i = 0; i < count; i++){ 
-      var x = (this.random() * deltaX) + this.lastHit.x + (this.random() * 10 - 5);
-      var y = (this.random() * deltaY) + this.lastHit.y + (this.random() * 10 - 5);
+      
+      var x = (this.random() * deltaX) + this.lastHit.x + (this.random() * spawnRadius - (spawnRadius/2));
+      var y = (this.random() * deltaY) + this.lastHit.y + (this.random() * spawnRadius - (spawnRadius/2));
+      
       this.points.push([x,y]);
-      this.velocity.push([(this.random() - 0.5)*2, (this.random() * 0.5)*2]);
+      this.velocity.push([(this.random() - 0.5) * 0.2, (this.random() * 0.5) * 0.2]);
       this.centers.push([x,y]);
-      var dist = distanceTo(x,y,coor.x,coor.y);
-      var index = Math.floor(dist * 0.1);
+      var dist = distanceTo(x, y, coor.x, coor.y);
+      var index = Math.floor(dist);
+      
       index = Math.max(0, Math.min(index, this.colors.length-1));
+
       this.fillColors.push( this.colors[index] );
     }
+
     this.updateVoronoi();
 
     this.lastHit.x = coor.x;
@@ -88,9 +95,12 @@ function VoronoiViz(board, puckID) {
     this.voronoiData = this.voronoi(this.points);
   }
 
-  this.render = function() {
+
+  this.render = function(context) {
+    
     this.updateVoronoi();
-    context.clearRect(0, 0, canvas.width, canvas.height);
+    
+    context.clearRect(0, 0, board.width, board.height);
 
     for (var k = 0, l = this.colors.length; k < l; ++k) {
       context.fillStyle = this.colors[k];
@@ -102,8 +112,8 @@ function VoronoiViz(board, puckID) {
             context.fillStyle = 'black';
             refreshStyle = true;
           } else {
-            var fade = 1 - (distanceTo(this.points[i][0], this.points[i][1], this.centers[i][0], this.centers[i][1]) * 0.035);
-            fade = Math.min(1,Math.max(0,fade));
+            var fade = 1 - (distanceTo(this.points[i][0], this.points[i][1], this.centers[i][0], this.centers[i][1]) * 0.35);
+            fade = Math.min(1, Math.max(0, fade));
             //console.log(fade);
             context.fillStyle = "rgba(" + this.fillColors[i][0] + ", " + this.fillColors[i][1] + ", " + this.fillColors[i][2] + ", " + fade + ")";
           }
@@ -118,17 +128,20 @@ function VoronoiViz(board, puckID) {
     }
 
     
-    /*for (var i = 0, n = this.voronoiData.length; i < n; ++i) {
+    /*
+    // Draw peg-cells 
+    for (var i = 0, n = this.voronoiData.length; i < n; ++i) {
       if(i < this.board.numPegs){
-       // context.lineWidth = 3;
-       // context.strokeStyle = "rgba(255,255,255,0.25)";
+        context.lineWidth = 0.1;
+        context.strokeStyle = "rgba(255,255,255,0.25)";
       } else {
         var fade = 1 - (distanceTo(this.points[i][0], this.points[i][1], this.centers[i][0], this.centers[i][1]) * 0.01);
         fade = Math.max(fade, 0.35);
         context.strokeStyle = "rgba(255,255,255, " + fade + ")";
       }
       if (draw(this.voronoiData[i])) context.stroke();
-    }*/
+    }
+    */
   }
 
   this.destroy = function() {

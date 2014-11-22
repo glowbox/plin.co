@@ -18,6 +18,8 @@ var PNG = require('png-js');
 var GIFEncoder = require('gifencoder');
 var phantom = require('phantom');
 
+var VIEWPORT_RATIO = 36 / 57.25;
+
 // wrapper for console output, muted if config.DEBUG is not enabled.
 function debug(args) {
   if(config.DEBUG){
@@ -269,7 +271,7 @@ app.post('/upload/', function(req, res) {
 
     var gifName = allIds[nextId] + '.gif';
 
-    encoder = new GIFEncoder(Math.floor(800*(37/58)), 800);
+    encoder = new GIFEncoder(Math.floor(800 * VIEWPORT_RATIO), 800);
     encoder.createReadStream().pipe(fs.createWriteStream(__dirname + '/tmp/' + gifName));
     encoder.start();
     encoder.setRepeat(0);   // 0 for repeat, -1 for no-repeat
@@ -347,6 +349,23 @@ app.get(/^\/([a-z]{3})$/, function(req, res) {
         } else {
           return res.render('app.mustache', {id: id, run: data.runs[0], 'js': 'app', 'projectionTargetPoints' : projectionTargetPoints});
         }
+      } else {
+        return res.render('404.mustache');
+      }
+    });
+  } else {
+    return res.render('app.mustache', {id: '1', run: [[0, 1], [.3, 2], [.6, 3]], 'js': 'app'});
+  }
+  // return res.render('home.mustache', {id: req.params[0]});
+});
+
+app.get('/render/:run_id', function(req, res) {
+  if (client) {
+    client.get(req.params.run_id, function (e, r) {
+      if (r) {
+        var data = JSON.parse(r);
+        console.log(data);
+        return res.render('app.mustache', {playback: true, id: req.params.run_id, run: data.runs[0], 'js': 'app', 'projectionTargetPoints' : projectionTargetPoints});
       } else {
         return res.render('404.mustache');
       }
@@ -628,7 +647,8 @@ function handlePinCode(data, force) {
       }
     }
 
-    if (!errorPin) {
+    var filterPins = false;
+    if (!filterPins || !errorPin) {
       if (isRunning || force) {
         serialData.push([new Date().getTime(), pegMap[parseInt(data, 10)]]);
       }
@@ -649,30 +669,54 @@ setTimeout(updateSocketHistory, 1000);
 function getAnimationFrames(encoder, currGif, max, gif, speed) {
   phantom.create(function (ph) {
     ph.createPage(function (page) {
-      page.set('viewportSize', {width:Math.floor(800*(37/58)),height:800})
-        page.open('http://localhost:' + port + '/' + gif, function (status) {
+      page.set('viewportSize', {width:Math.floor(800 * VIEWPORT_RATIO),height:800})
+        page.open('http://localhost:' + port + '/render/' + gif, function (status) {
           if (status !== 'success') {
-              console.log('Unable to access the network!');
+            console.log('Unable to access the network!');
           } else {
-              var num = 0;
-              var interval = setInterval(function() {
-                debug('render frame ' + num);
-                page.render(__dirname + '/tmp/_plinco/' + gif + '-' + num++ + '.png', function() {
-                  //getBlank(++id);
-                  // ph.exit();
-                });
-
-                if (num === max) {
-                  clearInterval(interval);
-                  ph.exit();
-                  addFrame(encoder, currGif, max, gif);
-                }
+            var renderStart = new Date().getTime();
+            var finished = false;
+            var accum = 0;
+            for(var num = 0; num < max; num++) {
               
-              }, speed);
+              // Run the animation logic as fast as possible without skipping frames.
+              while(accum < speed) {
+                page.evaluate(function() {
+                  animate(16);
+                });
+                accum += 16;
+              } 
+
+              accum -= speed;
+              
+              debug('render frame ' + num);
+              page.render(__dirname + '/tmp/_plinco/' + gif + '-' + num + '.png');
+            }
+
+            var waiting = true;
+            var lastFile = __dirname + '/tmp/_plinco/' + gif + '-' + (max-1) + '.png';
+            
+            var ellapsed = new Date().getTime() - renderStart;
+
+            console.log("Rendered in " + ellapsed + " milliseconds, waiting for PNG to exist: " + lastFile);
+
+            while(waiting){
+              if(fs.existsSync(lastFile)){
+                var stats = fs.statSync(lastFile);
+                console.log(stats);
+                waiting = false;
+              }
+            }
+
+            console.log("All PNG's exist, GIF encoding can start now.");
+            ph.exit();
+            addFrame(encoder, currGif, max, gif);
           }
       });
     });
   });
+  
+
 }
 
 // getBlank('mon');

@@ -29,28 +29,27 @@ function AttractMode(board, puckID) {
 
   for(var i = 0; i < 30; i++) {
     this.particles.push({
-      x : Math.random() * board.boardWidth + board.boardWidth,
-      y : Math.random() * board.boardHeight,
+      x : Math.random() * board.width,
+      y : Math.random() * board.height,
       vx : -10,
       vy : 0,
       color : this.colors[Math.floor(Math.random() * colorValues.length)],
-      lineWidth : Math.random() * 8 + 3
+      lineWidth : Math.random() * 0.15 + 0.35
     })
   }
 
 
   for(var i = 0; i < board.pegs.length; i++){
-    this.pegRanges.push( Math.random() * 200 + 100 );
+    this.pegRanges.push( Math.random() * 8 + 3 );
   }
 
   this.hit = function(runCurr, index) {
   },
 
+  this.render = function(context) {
 
-  this.render = function() {
-    //context.clearRect(0, 0, canvas.width, canvas.height);
     context.fillStyle = "rgba(0,0,0,0.1)";
-    context.fillRect(0,0,canvas.width,canvas.height);
+    context.fillRect(0, 0, board.width, board.height);
     context.strokeStyle = "rgba(255,255,255,1)";
     
     for(var i = 0; i < this.particles.length; i++) {
@@ -58,16 +57,13 @@ function AttractMode(board, puckID) {
       this.particles[i].y += this.particles[i].vy;
 
 
-      if(this.particles[i].y > board.boardHeight + 100){
-        this.particles[i].x = Math.random() * board.boardWidth;
-        this.particles[i].y = board.boardHeight + 100;
+      if(this.particles[i].y > board.height + 5){
+        this.particles[i].x = Math.random() * board.width;
+        this.particles[i].y = board.height + 5;
         this.particles[i].vx = 0;
-        this.particles[i].vy = Math.random() * -40 - 40;
+        this.particles[i].vy = Math.random() * -1.5 - 1;
         this.particles[i].color = this.colors[Math.floor(Math.random() * colorValues.length)];
       }
-      //console.log(this.particles);
-      var buddies = [];
-      
 
       var tmp = new THREE.Vector2();
       for(var p = 0; p < board.pegs.length; p++){
@@ -80,17 +76,13 @@ function AttractMode(board, puckID) {
           
           tmp.set(board.pegs[p].x - this.particles[i].x, board.pegs[p].x - this.particles[i].y);
           tmp.normalize();
-          tmp.multiplyScalar(influence * 0.425);
+          tmp.multiplyScalar(influence * 0.01);
 
           this.particles[i].vx += tmp.x;
-          this.particles[i].vy += (tmp.y * 0.25);
+          this.particles[i].vy += (tmp.y * 0.1);
           
-
-          buddies.push( board.pegs[p] );
-
           context.beginPath();
-          
-          context.lineWidth = this.particles[i].lineWidth * influence + 0.5;
+          context.lineWidth = this.particles[i].lineWidth * influence + 0.01;
           context.strokeStyle = "rgba(" + this.particles[i].color.join(",") + ", " + (influence) * 0.75 + ")";
           context.moveTo(this.particles[i].x, this.particles[i].y);
           context.lineTo(board.pegs[p].x, board.pegs[p].y);
@@ -101,15 +93,11 @@ function AttractMode(board, puckID) {
         
       }
 
-       // this.particles[i].vx -= 0.3;
+      this.particles[i].vy += 0.0075; // gravity.
 
-        this.particles[i].vy += 0.35;
-
-        this.particles[i].vx *= 0.98;
-        this.particles[i].vy *= 0.97;
+      this.particles[i].vx *= 0.98;
+      this.particles[i].vy *= 0.97;
     }
-    //context.closePath();
-    
   }
 
 
