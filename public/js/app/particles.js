@@ -252,7 +252,8 @@ if(this.useDefaultRenderer) {
     }
 
 
-    // Vertical baffles (TODO: Re-add these? Needs to be updated
+    // Vertical baffles 
+    // TODO: Re-add these? Needs to be updated...
     // if (i < 7) {
     //   var baffle = Physics.body('rectangle', {
     //       x: coors.x,

@@ -13,8 +13,7 @@ var camera;
 var scene;
 var renderer;
 
-var BOARD_RATIO = 36/57.25;
-
+var BOARD_RATIO = 36 / 57.25;
 
 // Height of the canvas to render board content.
 var renderSize = {
@@ -42,7 +41,7 @@ var gifSize = {};
 var runIds = [];
 
 var freeMode = true;
-var mousePosition = {x:0,y:0};
+var mousePosition = {x:0, y:0};
 
 $(function() {
   Math.seedrandom(puckID);
@@ -53,7 +52,8 @@ $(function() {
   }
 
   camera = new THREE.PerspectiveCamera( 75, BOARD_RATIO, 1, 10000 );
-  camera.position.z = 450;
+  camera.position.z = 100;
+  camera.lookAt(new THREE.Vector3(0,0,0));
 
   scene = new THREE.Scene();
 
@@ -212,7 +212,7 @@ function appMouseDown(e) {
     var my = e.pageY;
 
     for(var i = 0; i < 4; i++){
-      if(distanceTo(mx, my, targetPoints[i][0], targetPoints[i][1]) < 60){
+      if(distanceTo(mx, my, targetPoints[i][0], targetPoints[i][1]) < 60) {
         dragging = true;
         dragIndex = i;
         break;
@@ -230,6 +230,10 @@ function onAnimationFrame(){
 
   // Fixed time interval.. accumulate time until we exceed the frame rate,
   // then trigger rendering in 16 ms increments.
+  if(frameAccumulator > 64){
+    frameAccumulator = 64;
+  }
+
   while(frameAccumulator > 16){
     animate(16);
     frameAccumulator -= 16;
@@ -253,7 +257,7 @@ function animate(deltaTime) {
   if (live && hasStarted && !freeMode) {
     ellapsedTime += deltaTime;
     if(ellapsedTime > viz.gifLength) {
-      uploadImages();
+      onRunComplete();
       hasStarted = false;
     }
   }
@@ -273,18 +277,17 @@ function animate(deltaTime) {
   }
 }
 
+// TODO: store viz choices as a string in the run data.
 function chooseViz(id) {
-  var idx = parseInt(id.toLowerCase(), 36);
- // if (isLive) {
-    var modes = [ParticleEsplode, VoronoiViz]; //, BirdsViz];
-    var index = idx % modes.length;
-    return new modes[index](board, idx)
- // } else {
- //   return new VoronoiViz(board, idx);
- // }
-}
+  var modes = [ParticleEsplode, VoronoiViz];//, BirdsViz];
 
-function uploadImages() {
+  var idx = parseInt(id.toLowerCase(), 36);
+  var index = idx % modes.length;
+
+  return new modes[index](board, idx)
+ }
+
+function onRunComplete() {
   $.post('/upload/', {'num': 0, 'type': 'image', 'fps': viz.framesPerSecond, 'gifLength': viz.gifLength});
 }
 

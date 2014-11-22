@@ -324,10 +324,10 @@ function BirdsViz(board, puckID) {
   this.gifLength = 12000;
   this.framesPerSecond = 4;
 
-  var SCREEN_WIDTH = isLive ? 800 * BOARD_RATIO : window.innerWidth,
+  /*var SCREEN_WIDTH = isLive ? 800 * BOARD_RATIO : window.innerWidth,
   SCREEN_HEIGHT = isLive ? 800 : window.innerHeight,
   SCREEN_WIDTH_HALF = SCREEN_WIDTH  / 2,
-  SCREEN_HEIGHT_HALF = SCREEN_HEIGHT / 2;
+  SCREEN_HEIGHT_HALF = SCREEN_HEIGHT / 2;*/
   
   this.birds = [];
   var bird;
@@ -337,34 +337,48 @@ function BirdsViz(board, puckID) {
   var boid;
 
   this.init = function() {
-      canvas.className = 'invert';
+      //canvas.className = 'invert';
       var z = Math.random() * 400 - 200;
       z = 0;
-      var coor = board.getPinCoordinates(68);
-      var startPoint = new THREE.Vector3( coor.x * (1 / window.devicePixelRatio) - SCREEN_WIDTH_HALF, - coor.y * (1 / window.devicePixelRatio) + SCREEN_HEIGHT_HALF, 0);
-      for ( var i = 0; i < 300; i ++ ) {
+      //var coor = board.getPinCoordinates(68);
+      var startPoint = new THREE.Vector3( 0, 0, 0);
+      for ( var i = 0; i < 100; i ++ ) {
+        boid = this.boids[ i ] = new Boid();
+        // boid.position.x = Math.random() * 400 - 200;
+        // boid.position.y = Math.random() * 800 - 400;
+        boid.position.z = Math.random() * 400 - 200;
+        boid.position.x = startPoint.x;
+        boid.position.y = -200;
+        boid.position.z = startPoint.y;
+        boid.velocity.x = Math.random() * 2 - 1;
+        boid.velocity.y = Math.random() * 2 - 1;
+        boid.velocity.z = Math.random() * 2 - 1;
+        boid.setGoal(startPoint);
+        boid.setAvoidWalls( true );
+        boid.setWorldSize( 300, 600, 400 );
 
-          boid = this.boids[ i ] = new Boid();
-          // boid.position.x = Math.random() * 400 - 200;
-          // boid.position.y = Math.random() * 800 - 400;
-          boid.position.z = Math.random() * 400 - 200;
-          boid.position.x = startPoint.x;
-          boid.position.y = -200;
-          boid.position.z = startPoint.y;
-          boid.velocity.x = Math.random() * 2 - 1;
-          boid.velocity.y = Math.random() * 2 - 1;
-          boid.velocity.z = Math.random() * 2 - 1;
-          boid.setGoal(startPoint);
-          boid.setAvoidWalls( true );
-          boid.setWorldSize( 300, 600, 400 );
-
-          bird = this.birds[ i ] = new THREE.Mesh( new Bird(), new THREE.MeshBasicMaterial( { color:'#ffffff', side: THREE.DoubleSide } ) );
-          bird.phase = Math.floor( Math.random() * 62.83 );
-          scene.add( bird );
-
-
+        bird = this.birds[ i ] = new THREE.Mesh( new Bird(), new THREE.MeshBasicMaterial( { color:'#ffffff', side: THREE.DoubleSide } ) );
+        bird.phase = Math.floor( Math.random() * 62.83 );
+        scene.add( bird );
       }
 
+      /* 
+
+      // CanvasRenderer has been pulled as of r69 of THREE.js.. what to do...
+      var v3 = new THREE.Vector3();
+
+      for(var i = 0; i < board.pegs.length; i+= 3){
+        var coor = board.getPinCoordinates(i);
+        v3.set(coor.x - board.width/2, coor.y - board.height/2, camera.position.z - 0.1);
+        console.log(camera);
+        v3.unproject(camera);
+        v3.multiplyScalar(camera.position.z);
+        var peg = new THREE.Mesh( new THREE.BoxGeometry(3,3,3), new THREE.MeshBasicMaterial( { color:'#ff0000'} ) );
+        
+        peg.position.copy(v3);
+        scene.add(peg);
+      }
+      */
   }
 
   function onWindowResize() {
@@ -381,10 +395,11 @@ function BirdsViz(board, puckID) {
 
   }
 
-  this.render = function() {
-    context.fillStyle = 'black';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-
+  this.render = function(ctx) {
+    
+    //context.fillStyle = 'black';
+    //context.fillRect(0, 0, canvas.width, canvas.height);
+    console.log("Birds:" + this.birds.length);
     for ( var i = 0, il = this.birds.length; i < il; i++ ) {
       boid = this.boids[ i ];
       boid.run( this.boids );
@@ -393,7 +408,7 @@ function BirdsViz(board, puckID) {
       bird.position.copy( this.boids[ i ].position );
 
       color = bird.material.color;
-      bird.material.opacity = 1 - ( 500 - bird.position.z ) / 1000;
+      bird.material.opacity = 1;// - ( 500 - bird.position.z ) / 1000;
       // color.r = color.g = color.b = ( 500 - bird.position.z ) / 1000;
 
       bird.rotation.y = Math.atan2( - boid.velocity.z, boid.velocity.x );
@@ -406,9 +421,15 @@ function BirdsViz(board, puckID) {
 
   this.hit = function(runCurr, index) {
     var coor = board.getPinCoordinates(index);
-    var vector = new THREE.Vector3( coor.x * (1 / window.devicePixelRatio) - SCREEN_WIDTH_HALF, - coor.y * (1 / window.devicePixelRatio) + SCREEN_HEIGHT_HALF, 0);
+    var vector = new THREE.Vector3( coor.x - board.width / 2, coor.y - board.height / 2, 0);
+
+    var peg = new THREE.Mesh( new THREE.BoxGeometry(3,3,3), new THREE.MeshBasicMaterial( { color:'#ff0000'} ) );
+    peg.position.set(coor.x, coor.y, 0);
+    scene.add(peg);
+    
     this.locations.push(vector);
-    console.log(SCREEN_HEIGHT_HALF, coor, vector);
+
+    //console.log(SCREEN_HEIGHT_HALF, coor, vector);
     for ( var i = 0, il = self.boids.length; i < il; i++ ) {
         boid = self.boids[ i ];
         vector.z = boid.position.z;
@@ -419,13 +440,14 @@ function BirdsViz(board, puckID) {
   }
 
   this.destroy = function() {
+    console.log("Destroying birds.");
     for ( var i = 0; i < this.birds.length; i++ ) {
       scene.remove(viz.birds[i]);
     }
     this.birds = [];
     this.boids = [];
-    context.fillStyle = 'black';
-    context.fillRect(0, 0, canvas.width, canvas.height);
+   // context.fillStyle = 'black';
+   // context.fillRect(0, 0, canvas.width, canvas.height);
   }
 
   this.init();
