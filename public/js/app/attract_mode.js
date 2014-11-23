@@ -41,12 +41,12 @@ function AttractMode(board, puckID) {
 
   this.letters = {
     "p" : {
-      pins : [26, 20, 14, 8, 15, 21, 20],
+      pins : [26, 20, 14, 15, 21, 20],
       index : 0,
       color: hexToRgb(colorValues[0])
     },
     "l" : {
-      pins : [28, 22, 16, 10],
+      pins : [28, 22, 16],
       index : 0,
       color: hexToRgb(colorValues[1])
     },
@@ -123,8 +123,6 @@ function AttractMode(board, puckID) {
           context.stroke();
           context.closePath();
         }
-        
-        
       }
 
       this.particles[i].vy += 0.0075; // gravity.
@@ -148,8 +146,7 @@ function AttractMode(board, puckID) {
         for(var p = 0; p < this.particles.length; p++) {
           var d = distanceTo(this.particles[p].x, this.particles[p].y, coord.x, coord.y);
           
-          if(d < 3) {
-            
+          if(d < 3) {    
             var amt = 1 - (d / 3);
             context.lineWidth = 0.5 * amt;
             coord.x -= (coord.x - this.particles[p].x) * amt;
@@ -163,10 +160,6 @@ function AttractMode(board, puckID) {
         }
       }
       context.stroke();
-      //letter.index += 0.25;
-      //if(letter.index > letter.pins.length){
-      //  letter.index = 0;
-     // }
     }
   }
 
