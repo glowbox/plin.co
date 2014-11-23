@@ -1,6 +1,8 @@
 var two;
-var canvas;
-var context;
+
+var displayCanvas;
+var displayContext;
+
 var viz;
 var runCurr = 0;
 
@@ -8,6 +10,8 @@ var ellapsedTime = 0;
 var lastFrameTime = 0;
 var pngs = [];
 var uploading = false;
+var uploadCanvas;
+var uploadContext;
 
 var previousTime = 0;
 var frameAccumulator = 0;
@@ -102,13 +106,18 @@ $(function() {
 
   document.body.appendChild( renderer.domElement );
 
-  canvas = document.getElementsByTagName('canvas')[0];
-  canvas.setAttribute('id', 'canvas');
-  context = canvas.getContext('2d');
+  displayCanvas = document.getElementsByTagName('canvas')[0];
+  displayCanvas.setAttribute('id', 'canvas');
+  displayContext = displayCanvas.getContext('2d');
 
+  // create the temporary canvas to scale down captured frames.
+  uploadCanvas = document.createElement('canvas');
+  uploadCanvas.height = 800;
+  uploadCanvas.width = uploadCanvas.height * BOARD_RATIO;
+  uploadContext = uploadCanvas.getContext('2d');
+  
   onWindowResize();
   
-
   board = new Board();
   viz = createVisualizer(visualizer);
   pngs = [];
@@ -331,8 +340,7 @@ function animate(deltaTime) {
       // console.log(lastFrameTime, 1000/viz.framesPerSecond);
       if (lastFrameTime > 1000/viz.framesPerSecond) {
         lastFrameTime = 0;
-        var dataURL = canvas.toDataURL();
-        pngs.push(dataURL);
+        captureFrame();
       }
       // lastFrameTime, , 'gifLength': viz.gifLength
       // console.log(ellapsedTime);
@@ -340,11 +348,11 @@ function animate(deltaTime) {
   }
 
   // render the currrent visualizer
-  context.save();
-  var s = canvas.width / board.width;
-  context.scale(s,s);
-  viz.render(context, deltaTime);
-  context.restore();
+  displayContext.save();
+  var s = displayCanvas.width / board.width;
+  displayContext.scale(s,s);
+  viz.render(displayContext, deltaTime);
+  displayContext.restore();
 
   renderer.render( scene, camera );
 
@@ -352,6 +360,17 @@ function animate(deltaTime) {
   if(isLive){
     updateCalibration();
   }
+}
+
+function captureFrame(){
+
+  // copy the board image 
+  uploadContext.fillStyle = "black";
+  uploadContext.fillRect(0,0,uploadCanvas.width, uploadCanvas.height);
+  uploadContext.drawImage( displayCanvas, 0, 0, displayCanvas.width, displayCanvas.height, 0, 0, uploadCanvas.width, uploadCanvas.height);
+
+  var dataURL = uploadCanvas.toDataURL();
+  pngs.push(dataURL);
 }
 
 function onRunComplete() {
@@ -362,10 +381,19 @@ function onRunComplete() {
 
 function uploadImage(numUploaded) {
   if (DEBUG) console.log('uploading image ', numUploaded);
-  $.post('/upload/', {'num': numUploaded++, 'id': puckID, 'type': 'image', 'fps': viz.framesPerSecond, 'gifLength': viz.gifLength, 'png': pngs[0]}, function(data) {
-    pngs = pngs.slice(1);
-    uploadImageComplete(numUploaded);
-  });
+  $.post('/upload/', {
+      'num': numUploaded++, 
+      'id': puckID, 
+      'type': 'image', 
+      'fps': viz.framesPerSecond, 
+      'gifLength': viz.gifLength, 
+      'png': pngs[0]
+    }, 
+    function(data) {
+      pngs = pngs.slice(1);
+      uploadImageComplete(numUploaded);
+    }
+  );
 }
 
 function uploadImageComplete(numUploaded) {
@@ -381,9 +409,17 @@ function allImagesUploaded() {
   hasStarted = false;
   uploading = false;
   if (DEBUG) console.log('all images uploaded');
-  $.post('/upload/', {'id': puckID, 'type': 'done', 'fps': viz.framesPerSecond, 'gifLength': viz.gifLength, 'width': canvas.width, 'height': canvas.height}, function(data) {
-    
-  });
+  $.post('/upload/', {
+      'id': puckID, 
+      'type': 'done', 
+      'fps': viz.framesPerSecond, 
+      'gifLength': viz.gifLength, 
+      'width': uploadCanvas.width, 
+      'height': uploadCanvas.height
+    }, 
+    function(data) {
+    }
+  );
 }
 
 function updateRenderSize(){
@@ -406,10 +442,10 @@ function updateRenderSize(){
 
 function resizeCanvas() {
 
-  canvas.width = renderSize.width;
-  canvas.height = renderSize.height;
+  displayCanvas.width = renderSize.width;
+  displayCanvas.height = renderSize.height;
 
-  $(canvas).css({width: renderSize.width, height:renderSize.height});
+  $(displayCanvas).css({width: renderSize.width, height:renderSize.height});
 }
 
 function onWindowResize() {
@@ -447,29 +483,29 @@ function updateCalibration() {
 
   if (CALIBRATE_MAPPING) {
   
-    context.save();
+    displayContext.save();
   
-    var f = canvas.width / board.width;
-    context.scale(f,f);
-    context.lineWidth = 0.5;
-    context.fillStyle = "white";
-    context.strokeStyle = "white";
-    context.strokeRect(0, 0, board.width, board.height);
+    var f = displayCanvas.width / board.width;
+    displayContext.scale(f,f);
+    displayContext.lineWidth = 0.5;
+    displayContext.fillStyle = "white";
+    displayContext.strokeStyle = "white";
+    displayContext.strokeRect(0, 0, board.width, board.height);
   
     for(var i = 0; i < board.numPegs; i++){
       var coords = board.getPinCoordinates(i);
   
-      context.beginPath();
-      context.arc(coords.x, coords.y, 0.25, 0, 2 * Math.PI, false);
-      context.fillStyle = 'white';
-      context.fill();
+      displayContext.beginPath();
+      displayContext.arc(coords.x, coords.y, 0.25, 0, 2 * Math.PI, false);
+      displayContext.fillStyle = 'white';
+      displayContext.fill();
 
-      context.fillStyle = 'gray';
-      context.font = "0.6pt verdana";
-      context.fillText(i, coords.x+0.5, coords.y+0.25);
+      displayContext.fillStyle = 'gray';
+      displayContext.font = "0.6pt verdana";
+      displayContext.fillText(i, coords.x+0.5, coords.y+0.25);
     }
 
-    context.restore();
+    displayContext.restore();
   }
 
   if(!useCSSProjectionMapping){
@@ -509,8 +545,8 @@ function updateCSSPerspectiveTransform() {
     return d3.round(x, 6);
   });
  
-  $(canvas).css(transform, "matrix3d(" + matrix.join(',') + ")");
-  $(canvas).css(transform + "-origin", "0px 0px 0px");
+  $(displayCanvas).css(transform, "matrix3d(" + matrix.join(',') + ")");
+  $(displayCanvas).css(transform + "-origin", "0px 0px 0px");
 }
 
 
@@ -564,11 +600,11 @@ function initGLMapper() {
 
   glMapper.renderer = r;
 
-  $(canvas).hide();
+  $(displayCanvas).hide();
 
   document.body.appendChild(glMapper.renderer.domElement);
 
-  var canvasTex = new THREE.Texture(canvas);
+  var canvasTex = new THREE.Texture(displayCanvas);
   glMapper.source = canvasTex;
   glMapper.source.anisotropy = 16;
 
