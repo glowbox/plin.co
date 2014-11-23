@@ -61,7 +61,7 @@ function CardinalViz(board, puckID) {
   this.board = board;
   this.puckID = puckID;
 
-  this.gifLength = 8000;
+  this.gifLength = 9000;
   this.framesPerSecond = 5;
   this.name = "cardinal";
 
@@ -83,14 +83,17 @@ function CardinalViz(board, puckID) {
     SE: [1, 1]
   };
 
+  var ratio;
+
   this.init = function() {
     var self = this;
     this.vectors = new List();
     var numLines = 5;
 
     this.spreadCanvas = document.createElement('canvas');
-    this.spreadCanvas.width = this.board.width * 20;
-    this.spreadCanvas.height = this.board.height * 20;
+    ratio = canvas.width / this.board.width;
+    this.spreadCanvas.width = this.board.width * ratio;
+    this.spreadCanvas.height = this.board.height * ratio;
     this.spreadContext = this.spreadCanvas.getContext('2d');
   }
 
@@ -121,7 +124,7 @@ function CardinalViz(board, puckID) {
     this.pixelArray[i+2] = 255;
     this.pixelArray[i+3] = 0;
     this.context.fillStyle = "white";
-    this.context.fillRect(this.getx(point)/20, this.gety(point)/20, .1, .1);
+    this.context.fillRect(this.getx(point)/ratio, this.gety(point)/ratio, .1, .1);
     return true;
   }
 
@@ -129,7 +132,7 @@ function CardinalViz(board, puckID) {
     var coor = this.board.getPinCoordinates(index);
 
     for (var i = 0; i < 20; i++) {
-      this.vectors.push(new Vector(this.mkpoint(coor.x*20, coor.y*20),
+      this.vectors.push(new Vector(this.mkpoint(coor.x*ratio, coor.y*ratio),
                               this.randdir(),
                               20, this));
     }

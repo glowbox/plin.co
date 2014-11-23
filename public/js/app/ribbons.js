@@ -7,6 +7,10 @@ function RibbonsViz(board, puckID) {
   this.points = [];
   this.delay = 20;
 
+  this.gifLength = 7000;
+  this.framesPerSecond = 10;
+  this.name = "ribbons";
+
   this.lCol = "#ff0000";
   this.dCol = "#00ff00";
   this.colorValues;
