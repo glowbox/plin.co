@@ -106,7 +106,7 @@ function VoronoiViz(board, puckID) {
     for (var k = 0, l = this.colors.length; k < l; ++k) {
       context.fillStyle = this.colors[k];
       for (var i = 0, n = this.voronoiData.length; i < n; ++i) {
-        if (i % l === k && draw(this.voronoiData[i])) {
+        if (i % l === k && draw(context, this.voronoiData[i])) {
           var refreshStyle = false;
           if (i < this.board.numPegs) {
             //context.globalAlpha = 1;
@@ -149,14 +149,14 @@ function VoronoiViz(board, puckID) {
     this.voronoiData = [];
   }
 
-  function draw(cell) {
+  function draw(ctx, cell) {
     if (cell) {
-      context.beginPath();
-      context.moveTo(cell[0][0], cell[0][1]);
+      ctx.beginPath();
+      ctx.moveTo(cell[0][0], cell[0][1]);
       for (var j = 1, m = cell.length; j < m; ++j) {
-        context.lineTo(cell[j][0], cell[j][1]);
+        ctx.lineTo(cell[j][0], cell[j][1]);
       }
-      context.closePath();
+      ctx.closePath();
       return true;
     }
   }
