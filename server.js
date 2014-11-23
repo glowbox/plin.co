@@ -194,12 +194,18 @@ function updateSocketHistory() {
 
 function postTweet(gif, gifName, path) {
   if (twitterRestClient) {
-    history[history.length - 1]['tweeted'] = 'progress';
+    var historyEntry;
+    for (var i = 0; i < history.length; i++) {
+      if (gif == history[i]['id']) {
+        historyEntry = history[i];
+      }
+    }
+    historyEntry['tweeted'] = 'progress';
     updateSocketHistory();
     var status = 'Another round played! Check it out at http://plin.co/' + gif + '!';
-    debug(history[history.length - 1]);
-    if (history[history.length - 1]['twitter'].length) {
-      status = 'Thanks for playing, @' + history[history.length - 1]['twitter'] + '. Check out your run at http://plin.co/' + gif + '!';
+    debug(historyEntry);
+    if (historyEntry['twitter'].length) {
+      status = 'Thanks for playing, @' + historyEntry['twitter'] + '. Check out your run at http://plin.co/' + gif + '!';
     }
     twitterRestClient.statusesUpdateWithMedia(
       {
@@ -216,7 +222,7 @@ function postTweet(gif, gifName, path) {
 
         removeGifFiles(gif, gifName, path);
 
-        history[history.length - 1]['tweeted'] = true;
+        historyEntry['tweeted'] = true;
         updateSocketHistory()
       }
     );
@@ -224,17 +230,17 @@ function postTweet(gif, gifName, path) {
 }
 
 function removeGifFiles(tempId, gifName, path) {
+  var files = fs.readdirSync(path);
+  files.forEach(function(file,index){
+      var curPath = path + "/" + file;
+      if(fs.lstatSync(curPath).isDirectory()) { // recurse
+          deleteFolderRecursive(curPath);
+      } else { // delete file
+          fs.unlinkSync(curPath);
+      }
+  });
+  fs.rmdirSync(path);
   if (!config.KEEP_GIFS) {
-    var files = fs.readdirSync(path);
-    files.forEach(function(file,index){
-        var curPath = path + "/" + file;
-        if(fs.lstatSync(curPath).isDirectory()) { // recurse
-            deleteFolderRecursive(curPath);
-        } else { // delete file
-            fs.unlinkSync(curPath);
-        }
-    });
-    fs.rmdirSync(path);
     fs.unlinkSync(__dirname + '/tmp/' + tempId + '.gif');
   }
 }
@@ -271,7 +277,7 @@ app.post('/upload/', function(req, res) {
     addFrame(encoder, 0, encoderFrames - 2, req.body.id);
     //getAnimationFrames(encoder, 0, encoderFrames, req.body.id, 1000/req.body.fps);
 
-    endDrop();
+    endDrop(req.body.visualizer);
     history[history.length - 1]['complete'] = true;
     updateSocketHistory();
     isRunning = false;
@@ -315,7 +321,11 @@ function addFrame(encoder, currGif, max, gif) {
           // });
 
           knoxClient.putFile(__dirname + '/tmp/' + gifName, gifName, function(err, res){
-            history[history.length - 1]['saved'] = true;
+            for (var i = 0; i < history.length; i++) {
+              if (gif == history[i]['id']) {
+                history[i]['saved'] = true;
+              }
+            }
             updateSocketHistory()
 
             debug('FILE PLACED');
@@ -423,14 +433,22 @@ app.post('/end-run/', function(req, res) {
   return res.send('success!');
 });
 
-app.post('/free-run/', function(req, res) {
+app.post('/change-mode/', function(req, res) {
   if (history.length) {
-    history[history.length - 1]['complete'] = true;
+    history[history.length - 1]['visualizer'] = req.body.visualizer;
     updateSocketHistory();
   }
   endDrop();
-  isRunning = false;
-  io.emit('reset', {'id': 0, 'visualizer': req.body.visualizer, 'freemode': true});
+  if (history.length) {
+    console.log('--', history[history.length - 1]['complete']);
+    if (history[history.length - 1]['complete'] == 'progress') {
+      io.emit('reset', {'id': history[history.length - 1]['id'], 'visualizer': req.body.visualizer, 'freemode': false});;
+    } else {
+      io.emit('reset', {'id': 0, 'visualizer': req.body.visualizer, 'freemode': true});
+    }
+  } else {
+    io.emit('reset', {'id': 0, 'visualizer': req.body.visualizer, 'freemode': true});
+  }
   return res.send('success!');
 });
 
@@ -465,7 +483,8 @@ app.post('/peg-hit', function(req, res) {
 });
 
 app.post('/add-user/', function(req, res) {
-  addPlayer(req.body.username, req.body.vizualizer);
+  addPlayer(req.body.username, req.body.visualizer);
+  console.log('----', req.body.username, req.body.visualizer)
   return res.send('success!');
 });
 
@@ -577,7 +596,7 @@ function startDrop() {
 }
 
 
-function endDrop() {
+function endDrop(visualizerName) {
   debug('Setting data for: ' + allIds[nextId]);
   
   if (serialData.length) {
@@ -592,7 +611,7 @@ function endDrop() {
       ],
       twitter: history.length ? history[history.length - 1]['twitter'] : '',
       time: new Date().getTime(),
-      visualizer: history.length ? history[history.length - 1]['visualizer'] : ''
+      visualizer: history[history.length - 1]['visualizer']
     };
     if (client) {
       console.log("Saving record: ", dataComplete);

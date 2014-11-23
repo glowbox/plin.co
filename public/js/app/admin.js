@@ -27,7 +27,7 @@ $(function() {
     var btn = $(document.createElement('button'));
     btn.addClass('btn');
     btn.addClass('btn-default');
-    btn.addClass('free-mode');
+    btn.addClass('change-mode');
     btn.attr("data-mode", itm);
     btn.html(visualizers[itm].name);
     $("#visualizer-list").append(btn);
@@ -58,9 +58,10 @@ $(function() {
         $('table.history').append('<tr class="row"> \
           <td class="col-md-1">' + d.id + '</td> \
           <td class="col-md-3">' + (d.twitter || '') + '</td>  \
-          <td class="col-md-2 ' + d.complete + '"> </td> \
-          <td class="col-md-2 ' + d.saved + '"> </td> \
-          <td class="col-md-4 ' + d.tweeted + '"> </td> \
+          <td class="col-md-3">' + (d.visualizer || '') + '</td>  \
+          <td class="col-md-1 ' + d.complete + '"> </td> \
+          <td class="col-md-1 ' + d.saved + '"> </td> \
+          <td class="col-md-1 ' + d.tweeted + '"> </td> \
         </tr>');
       }
     });
@@ -93,8 +94,8 @@ $(function() {
     $.post('/end-run/');
   })
   $('.queue li a').bind('touch, mousedown', removeUser);
-  $('.free-mode').bind('touch, mousedown', function(e) {
-    $.post('/free-run/', {'visualizer': $(this).attr('data-mode')});
+  $('.change-mode').bind('touch, mousedown', function(e) {
+    $.post('/change-mode/', {'visualizer': $(this).attr('data-mode')});
   })
 
   function removeUser(e) {

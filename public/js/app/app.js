@@ -76,6 +76,7 @@ var visualizers = {
     'constructor' : RibbonsViz
   }
 };
+var currVisualizer;
 
 $(function() {
   Math.seedrandom(puckID);
@@ -156,7 +157,6 @@ function appSocketOnReset(data){
   freeMode = data.freemode;
   puckID = data.id;
   var visName = data.visualizer;
-  visName = 'cardinal';
 
   if (freeMode) {
     Math.seedrandom(Math.random());
@@ -174,7 +174,8 @@ function appSocketOnReset(data){
 }
 
 function createVisualizer(name){
-  console.log("CREATE: " + name);
+  if (DEBUG) console.log("CREATE: " + name);
+  currVisualizer = name;
   if(visualizers[name]) {
     return new visualizers[name].constructor(board, puckID);
   } else {
@@ -350,13 +351,13 @@ function animate(deltaTime) {
 }
 
 function onRunComplete() {
-  console.log('run complete');
+  if (DEBUG) console.log('run complete');
   uploading = true;
   uploadImage(0);
 }
 
 function uploadImage(numUploaded) {
-  console.log('uploading image ', numUploaded);
+  if (DEBUG) console.log('uploading image ', numUploaded);
   $.post('/upload/', {'num': numUploaded++, 'id': puckID, 'type': 'image', 'fps': viz.framesPerSecond, 'gifLength': viz.gifLength, 'png': pngs[0]}, function(data) {
     pngs = pngs.slice(1);
     uploadImageComplete(numUploaded);
@@ -364,7 +365,7 @@ function uploadImage(numUploaded) {
 }
 
 function uploadImageComplete(numUploaded) {
-  console.log('uploaded image ', numUploaded);
+  if (DEBUG) console.log('uploaded image ', numUploaded);
   if (pngs.length) {
     uploadImage(numUploaded);
   } else {
@@ -375,7 +376,7 @@ function uploadImageComplete(numUploaded) {
 function allImagesUploaded() {
   hasStarted = false;
   uploading = false;
-  console.log('all images uploaded');
+  if (DEBUG) console.log('all images uploaded');
   $.post('/upload/', {'id': puckID, 'type': 'done', 'fps': viz.framesPerSecond, 'gifLength': viz.gifLength, 'width': canvas.width, 'height': canvas.height}, function(data) {
     
   });

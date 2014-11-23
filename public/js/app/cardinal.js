@@ -1,4 +1,4 @@
-function Vector(point, dir, depth, viz) {
+function Vector(point, dir, depth, viz, color) {
   this.p0 = this.p1 = this.p2 = point;
   this.dx = dir[0];
   this.dy = dir[1];
@@ -9,6 +9,7 @@ function Vector(point, dir, depth, viz) {
   this.list = null;
   this.viz = viz;
   this.context;
+  this.color = color;
   // console.log('--', this.viz);
 }
 
@@ -17,7 +18,7 @@ Vector.prototype.step = function() {
   this.p1 = this.p2;
   this.p2 = this.viz.movepoint(this.p2, this.dx, this.dy);
   this.dead = this.viz.dead(this.p2, this.depth);
-  if (!this.viz.setpixel(this.p2)) {
+  if (!this.viz.setpixel(this.p2, this.color)) {
     this.dead = true;
     this.list.push(this.spawn());
   }
@@ -26,7 +27,7 @@ Vector.prototype.step = function() {
 Vector.prototype.spawn = function() {
   return new Vector(this.viz.pickpoint(this.p0, this.p2),
                     this.viz.randdir(),
-                    this.depth - 1, this.viz);
+                    this.depth - 1, this.viz, this.color);
 };
 
 function List() {
@@ -71,6 +72,7 @@ function CardinalViz(board, puckID) {
 
   this.spreadCanvas;
   this.spreadContext;
+  this.colorValues;
 
   this.dir = {
     N: [0, -1],
@@ -95,6 +97,15 @@ function CardinalViz(board, puckID) {
     this.spreadCanvas.width = this.board.width * ratio;
     this.spreadCanvas.height = this.board.height * ratio;
     this.spreadContext = this.spreadCanvas.getContext('2d');
+
+    var scheme = new ColorScheme;
+    scheme.from_hue(Math.floor(Math.random() * 360))
+      .scheme('contrast')
+      .distance(0.1)
+      .add_complement(true)
+      .variation('hard')
+      .web_safe(false);
+    this.colorValues = scheme.colors();
   }
 
   this.destroy = function() {
@@ -116,14 +127,14 @@ function CardinalViz(board, puckID) {
     
   }
 
-  this.setpixel = function(point) {
+  this.setpixel = function(point, color) {
     var i = this.getx(point) * 4 + this.gety(point) * this.spreadCanvas.width * 4;
     if (this.pixelArray[i]) return false;
     this.pixelArray[i] = 255;
     this.pixelArray[i+1] = 255;
     this.pixelArray[i+2] = 255;
     this.pixelArray[i+3] = 0;
-    this.context.fillStyle = "white";
+    this.context.fillStyle = 'rgb(' + color.r + ', ' + color.g + ', ' + color.b + ')';
     this.context.fillRect(this.getx(point)/ratio, this.gety(point)/ratio, .1, .1);
     return true;
   }
@@ -132,9 +143,11 @@ function CardinalViz(board, puckID) {
     var coor = this.board.getPinCoordinates(index);
 
     for (var i = 0; i < 20; i++) {
+      var colorHex = this.colorValues[Math.floor(Math.random() * this.colorValues.length)];
+
       this.vectors.push(new Vector(this.mkpoint(coor.x*ratio, coor.y*ratio),
                               this.randdir(),
-                              20, this));
+                              20, this, hexToRgb(colorHex)));
     }
   }
 
