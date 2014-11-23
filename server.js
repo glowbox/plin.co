@@ -194,12 +194,18 @@ function updateSocketHistory() {
 
 function postTweet(gif, gifName, path) {
   if (twitterRestClient) {
-    history[history.length - 1]['tweeted'] = 'progress';
+    var historyEntry;
+    for (var i = 0; i < history.length; i++) {
+      if (gif == history[i]['id']) {
+        historyEntry = history[i];
+      }
+    }
+    historyEntry['tweeted'] = 'progress';
     updateSocketHistory();
     var status = 'Another round played! Check it out at http://plin.co/' + gif + '!';
-    debug(history[history.length - 1]);
-    if (history[history.length - 1]['twitter'].length) {
-      status = 'Thanks for playing, @' + history[history.length - 1]['twitter'] + '. Check out your run at http://plin.co/' + gif + '!';
+    debug(historyEntry);
+    if (historyEntry['twitter'].length) {
+      status = 'Thanks for playing, @' + historyEntry['twitter'] + '. Check out your run at http://plin.co/' + gif + '!';
     }
     twitterRestClient.statusesUpdateWithMedia(
       {
@@ -216,7 +222,7 @@ function postTweet(gif, gifName, path) {
 
         removeGifFiles(gif, gifName, path);
 
-        history[history.length - 1]['tweeted'] = true;
+        historyEntry['tweeted'] = true;
         updateSocketHistory()
       }
     );
@@ -224,17 +230,17 @@ function postTweet(gif, gifName, path) {
 }
 
 function removeGifFiles(tempId, gifName, path) {
+  var files = fs.readdirSync(path);
+  files.forEach(function(file,index){
+      var curPath = path + "/" + file;
+      if(fs.lstatSync(curPath).isDirectory()) { // recurse
+          deleteFolderRecursive(curPath);
+      } else { // delete file
+          fs.unlinkSync(curPath);
+      }
+  });
+  fs.rmdirSync(path);
   if (!config.KEEP_GIFS) {
-    var files = fs.readdirSync(path);
-    files.forEach(function(file,index){
-        var curPath = path + "/" + file;
-        if(fs.lstatSync(curPath).isDirectory()) { // recurse
-            deleteFolderRecursive(curPath);
-        } else { // delete file
-            fs.unlinkSync(curPath);
-        }
-    });
-    fs.rmdirSync(path);
     fs.unlinkSync(__dirname + '/tmp/' + tempId + '.gif');
   }
 }
@@ -315,7 +321,11 @@ function addFrame(encoder, currGif, max, gif) {
           // });
 
           knoxClient.putFile(__dirname + '/tmp/' + gifName, gifName, function(err, res){
-            history[history.length - 1]['saved'] = true;
+            for (var i = 0; i < history.length; i++) {
+              if (gif == history[i]['id']) {
+                history[i]['saved'] = true;
+              }
+            }
             updateSocketHistory()
 
             debug('FILE PLACED');
