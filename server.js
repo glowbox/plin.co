@@ -437,8 +437,8 @@ app.post('/change-mode/', function(req, res) {
   if (history.length) {
     history[history.length - 1]['visualizer'] = req.body.visualizer;
     updateSocketHistory();
+    endDrop();
   }
-  endDrop();
   if (history.length) {
     console.log('--', history[history.length - 1]['complete']);
     if (history[history.length - 1]['complete'] == 'progress') {

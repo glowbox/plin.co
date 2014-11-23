@@ -74,6 +74,10 @@ var visualizers = {
   'ribbons' :  {
     'name' : 'Ribbons',
     'constructor' : RibbonsViz
+  },
+  'strum' :  {
+    'name' : 'Strum',
+    'constructor' : StrumViz
   }
 };
 var currVisualizer;
