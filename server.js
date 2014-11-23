@@ -19,6 +19,7 @@ var GIFEncoder = require('gifencoder');
 var phantom = require('phantom');
 
 var VIEWPORT_RATIO = 36 / 57.25;
+var lastGif;
 
 // wrapper for console output, muted if config.DEBUG is not enabled.
 function debug(args) {
@@ -27,11 +28,10 @@ function debug(args) {
   }
 }
 
-
 process.on('uncaughtException', function (err) {
   if (err.stack.indexOf('png-js') !== -1) {
     if (encoderFramesCurr < encoderFrames) {
-      addFrame(encoder, ++encoderFramesCurr, encoderFrames);
+      addFrame(encoder, ++encoderFramesCurr, encoderFrames, lastGif);
     }
     console.log(err.stack);
   } else {
@@ -250,9 +250,7 @@ app.post('/upload/', function(req, res) {
   //   }
   // });
   if (req.body.type === 'done') {
-    
-
-  } else {
+    console.log('done');
     if (knoxClient) {
       debug('KNOX CLIENT!!!');
     }
@@ -261,28 +259,35 @@ app.post('/upload/', function(req, res) {
       updateSocketHistory();
     }
 
-    var gifName = allIds[nextId] + '.gif';
+    var gifName = req.body.id + '.gif';
 
-    encoder = new GIFEncoder(Math.floor(800 * VIEWPORT_RATIO), 800);
+    encoder = new GIFEncoder(req.body.width, req.body.height);
     encoder.createReadStream().pipe(fs.createWriteStream(__dirname + '/tmp/' + gifName));
     encoder.start();
     encoder.setRepeat(0);   // 0 for repeat, -1 for no-repeat
     encoder.setDelay(1000/req.body.fps);  // frame delay in ms
     encoder.setQuality(10);
     encoderFrames = req.body.gifLength/1000 * req.body.fps;
-    
-    getAnimationFrames(encoder, 0, encoderFrames, allIds[nextId], 1000/req.body.fps);
+    addFrame(encoder, 0, encoderFrames - 2, req.body.id);
+    //getAnimationFrames(encoder, 0, encoderFrames, req.body.id, 1000/req.body.fps);
 
     endDrop();
     history[history.length - 1]['complete'] = true;
     updateSocketHistory();
     isRunning = false;
+  } else {
+    var png = req.body.png;
+    var data = png.replace(/^data:image\/\w+;base64,/, "");
+    var buf = new Buffer(data, 'base64');
+    fs.writeFileSync(__dirname + '/tmp/' + req.body.id + '/' + req.body.id + '-' + req.body.num + '.png', buf);
   }
   return res.send('success!');
 });
 
 function addFrame(encoder, currGif, max, gif) {
   encoderFramesCurr = currGif;
+  lastGif = gif;
+  console.log('ADD FRAME');
  // debug('ADDING FRAMES: ' + currGif);
 
   //__dirname + '/tmp/_plinco/' + id + '-' + num++ + '.png'
@@ -297,6 +302,7 @@ function addFrame(encoder, currGif, max, gif) {
     PNG.decode(imagePath, function(pixels) {
       if (currGif++ < max - 1) {
         encoder.addFrame(pixels);
+       
         addFrame(encoder, currGif, max, gif);
       } else {
         debug('ENCODER FINISHED!');
@@ -690,59 +696,59 @@ function handlePinCode(data, force) {
 
 setTimeout(updateSocketHistory, 1000);
 
-function getAnimationFrames(encoder, currGif, max, gif, speed) {
-  phantom.create(function (ph) {
-    ph.createPage(function (page) {
-      page.set('viewportSize', {width:Math.floor(800 * VIEWPORT_RATIO),height:800})
-        page.open('http://localhost:' + port + '/render/' + gif, function (status) {
-          if (status !== 'success') {
-            console.log('Unable to access the network!');
-          } else {
-            var renderStart = new Date().getTime();
-            var finished = false;
-            var accum = 0;
-            var tmpFolder = __dirname + '/tmp/' + gif + '/';
+// function getAnimationFrames(encoder, currGif, max, gif, speed) {
+//   phantom.create(function (ph) {
+//     ph.createPage(function (page) {
+//       page.set('viewportSize', {width:Math.floor(800 * VIEWPORT_RATIO),height:800})
+//         page.open('http://localhost:' + port + '/render/' + gif, function (status) {
+//           if (status !== 'success') {
+//             console.log('Unable to access the network!');
+//           } else {
+//             var renderStart = new Date().getTime();
+//             var finished = false;
+//             var accum = 0;
+//             var tmpFolder = __dirname + '/tmp/' + gif + '/';
 
-            for(var num = 0; num < max; num++) {
+//             for(var num = 0; num < max; num++) {
               
-              // Run the animation logic as fast as possible without skipping frames.
-              while(accum < speed) {
-                page.evaluate(function() {
-                  animate(16);
-                });
-                accum += 16;
-              } 
+//               // Run the animation logic as fast as possible without skipping frames.
+//               while(accum < speed) {
+//                 page.evaluate(function() {
+//                   animate(16);
+//                 });
+//                 accum += 16;
+//               } 
 
-              accum -= speed;
+//               accum -= speed;
               
-              debug('Render frame: ' + num);
-              page.render(tmpFolder + gif + '-' + num + '.png');
-            }
+//               debug('Render frame: ' + num);
+//               page.render(tmpFolder + gif + '-' + num + '.png');
+//             }
 
-            var waiting = true;
-            var lastFile = tmpFolder + gif + '-' + (max-1) + '.png';
+//             var waiting = true;
+//             var lastFile = tmpFolder + gif + '-' + (max-1) + '.png';
             
-            var ellapsed = new Date().getTime() - renderStart;
+//             var ellapsed = new Date().getTime() - renderStart;
 
-            console.log("Rendered in " + ellapsed + " milliseconds, waiting for PNG to exist: " + lastFile);
+//             console.log("Rendered in " + ellapsed + " milliseconds, waiting for PNG to exist: " + lastFile);
 
-            // TODO: there's probably a better way to do this.
-            while(waiting){
-              if(fs.existsSync(lastFile)){
-                var stats = fs.statSync(lastFile);
-                waiting = false;
-              }
-            }
+//             // TODO: there's probably a better way to do this.
+//             while(waiting){
+//               if(fs.existsSync(lastFile)){
+//                 var stats = fs.statSync(lastFile);
+//                 waiting = false;
+//               }
+//             }
 
-            console.log("All PNG's exist, GIF encoding can start now.");
-            ph.exit();
-            addFrame(encoder, currGif, max, gif);
-          }
-      });
-    });
-  });
+//             console.log("All PNG's exist, GIF encoding can start now.");
+//             ph.exit();
+//             addFrame(encoder, currGif, max, gif);
+//           }
+//       });
+//     });
+//   });
   
 
-}
+// }
 
 // getBlank('mon');

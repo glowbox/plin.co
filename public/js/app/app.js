@@ -5,6 +5,9 @@ var viz;
 var runCurr = 0;
 
 var ellapsedTime = 0;
+var lastFrameTime = 0;
+var pngs = [];
+var uploading = false;
 
 var previousTime = 0;
 var frameAccumulator = 0;
@@ -103,6 +106,7 @@ $(function() {
 
   board = new Board();
   viz = createVisualizer(visualizer);
+  pngs = [];
 
   //viz = new AttractMode(board, 1);
   // viz = new ParticleEsplode(board, parseInt(puckID.toLowerCase(), 36));
@@ -152,6 +156,7 @@ function appSocketOnReset(data){
   freeMode = data.freemode;
   puckID = data.id;
   var visName = data.visualizer;
+  visName = 'cardinal';
 
   if (freeMode) {
     Math.seedrandom(Math.random());
@@ -161,6 +166,7 @@ function appSocketOnReset(data){
   
   viz.destroy();
   viz = createVisualizer(visName);
+  pngs = [];
 
   resizeCanvas();
   hasStarted = false;
@@ -312,9 +318,19 @@ function animate(deltaTime) {
   // If this is a tracked run, wait until it's done then notify the server.
   if (live && hasStarted && !freeMode) {
     ellapsedTime += deltaTime;
-    if(ellapsedTime > viz.gifLength) {
+    lastFrameTime += deltaTime;
+    if(ellapsedTime > viz.gifLength && !uploading) {
       onRunComplete();
-      hasStarted = false;
+
+    } else {
+      // console.log(lastFrameTime, 1000/viz.framesPerSecond);
+      if (lastFrameTime > 1000/viz.framesPerSecond) {
+        lastFrameTime = 0;
+        var dataURL = canvas.toDataURL();
+        pngs.push(dataURL);
+      }
+      // lastFrameTime, , 'gifLength': viz.gifLength
+      // console.log(ellapsedTime);
     }
   }
 
@@ -334,7 +350,35 @@ function animate(deltaTime) {
 }
 
 function onRunComplete() {
-  $.post('/upload/', {'num': 0, 'type': 'image', 'fps': viz.framesPerSecond, 'gifLength': viz.gifLength});
+  console.log('run complete');
+  uploading = true;
+  uploadImage(0);
+}
+
+function uploadImage(numUploaded) {
+  console.log('uploading image ', numUploaded);
+  $.post('/upload/', {'num': numUploaded++, 'id': puckID, 'type': 'image', 'fps': viz.framesPerSecond, 'gifLength': viz.gifLength, 'png': pngs[0]}, function(data) {
+    pngs = pngs.slice(1);
+    uploadImageComplete(numUploaded);
+  });
+}
+
+function uploadImageComplete(numUploaded) {
+  console.log('uploaded image ', numUploaded);
+  if (pngs.length) {
+    uploadImage(numUploaded);
+  } else {
+    allImagesUploaded();
+  }
+}
+
+function allImagesUploaded() {
+  hasStarted = false;
+  uploading = false;
+  console.log('all images uploaded');
+  $.post('/upload/', {'id': puckID, 'type': 'done', 'fps': viz.framesPerSecond, 'gifLength': viz.gifLength, 'width': canvas.width, 'height': canvas.height}, function(data) {
+    
+  });
 }
 
 function updateRenderSize(){
