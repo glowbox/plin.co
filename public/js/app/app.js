@@ -76,6 +76,7 @@ var visualizers = {
     'constructor' : RibbonsViz
   }
 };
+var currVisualizer;
 
 $(function() {
   Math.seedrandom(puckID);
@@ -162,6 +163,7 @@ function appSocketOnReset(data){
   } else {
     Math.seedrandom(puckID);
   }
+  console.log(freeMode);
   
   viz.destroy();
   viz = createVisualizer(visName);
@@ -174,6 +176,7 @@ function appSocketOnReset(data){
 
 function createVisualizer(name){
   console.log("CREATE: " + name);
+  currVisualizer = name;
   if(visualizers[name]) {
     return new visualizers[name].constructor(board, puckID);
   } else {

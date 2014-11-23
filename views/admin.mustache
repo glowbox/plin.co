@@ -7,33 +7,21 @@
         <tr class="row">
           <th class="col-md-1">id</th>
           <th class="col-md-3">twitter</th> 
-          <th class="col-md-2">complete</th>
-          <th class="col-md-2">saved</th>
-          <th class="col-md-4">tweeted</th>
+          <th class="col-md-3">vis</th> 
+          <th class="col-md-1">complete</th>
+          <th class="col-md-1">saved</th>
+          <th class="col-md-1">tweeted</th>
         </tr>
         {{#history}}
           <tr class="row">
             <td class="col-md-1">{{id}}</td>
             <td class="col-md-3">{{twitter}}</td> 
-            <td class="col-md-2 {{complete}}"> </td>
-            <td class="col-md-2 {{saved}}"> </td>
-            <td class="col-md-4 {{tweeted}}"> </td>
+            <td class="col-md-3">{{visualizer}}</td>
+            <td class="col-md-1 {{complete}}"> </td>
+            <td class="col-md-1 {{saved}}"> </td>
+            <td class="col-md-1 {{tweeted}}"> </td>
           </tr>
         {{/history}}
-        <tr class="row">
-          <td class="col-md-1">{{id}}</td>
-          <td class="col-md-3">{{twitter}}</td> 
-          <td class="col-md-2 {{complete}}"> </td>
-          <td class="col-md-2 {{saved}}"> </td>
-          <td class="col-md-4 {{tweeted}}"> </td>
-        </tr>
-        <tr class="row">
-          <td class="col-md-1">{{id}}</td>
-          <td class="col-md-3">{{twitter}}</td> 
-          <td class="col-md-2 {{complete}}"> </td>
-          <td class="col-md-2 {{saved}}"> </td>
-          <td class="col-md-4 {{tweeted}}"> </td>
-        </tr>
       </table>
     </div>
     <div class="col-md-4">

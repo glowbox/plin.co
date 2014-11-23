@@ -271,7 +271,7 @@ app.post('/upload/', function(req, res) {
     addFrame(encoder, 0, encoderFrames - 2, req.body.id);
     //getAnimationFrames(encoder, 0, encoderFrames, req.body.id, 1000/req.body.fps);
 
-    endDrop();
+    endDrop(req.body.visualizer);
     history[history.length - 1]['complete'] = true;
     updateSocketHistory();
     isRunning = false;
@@ -423,14 +423,22 @@ app.post('/end-run/', function(req, res) {
   return res.send('success!');
 });
 
-app.post('/free-run/', function(req, res) {
+app.post('/change-mode/', function(req, res) {
   if (history.length) {
-    history[history.length - 1]['complete'] = true;
+    history[history.length - 1]['visualizer'] = req.body.visualizer;
     updateSocketHistory();
   }
   endDrop();
-  isRunning = false;
-  io.emit('reset', {'id': 0, 'visualizer': req.body.visualizer, 'freemode': true});
+  if (history.length) {
+    console.log('--', history[history.length - 1]['complete']);
+    if (history[history.length - 1]['complete'] == 'progress') {
+      io.emit('reset', {'id': history[history.length - 1]['id'], 'visualizer': req.body.visualizer, 'freemode': false});;
+    } else {
+      io.emit('reset', {'id': 0, 'visualizer': req.body.visualizer, 'freemode': true});
+    }
+  } else {
+    io.emit('reset', {'id': 0, 'visualizer': req.body.visualizer, 'freemode': true});
+  }
   return res.send('success!');
 });
 
@@ -465,7 +473,8 @@ app.post('/peg-hit', function(req, res) {
 });
 
 app.post('/add-user/', function(req, res) {
-  addPlayer(req.body.username, req.body.vizualizer);
+  addPlayer(req.body.username, req.body.visualizer);
+  console.log('----', req.body.username, req.body.visualizer)
   return res.send('success!');
 });
 
@@ -577,7 +586,7 @@ function startDrop() {
 }
 
 
-function endDrop() {
+function endDrop(visualizerName) {
   debug('Setting data for: ' + allIds[nextId]);
   
   if (serialData.length) {
@@ -592,7 +601,7 @@ function endDrop() {
       ],
       twitter: history.length ? history[history.length - 1]['twitter'] : '',
       time: new Date().getTime(),
-      visualizer: history.length ? history[history.length - 1]['visualizer'] : ''
+      visualizer: history[history.length - 1]['visualizer']
     };
     if (client) {
       console.log("Saving record: ", dataComplete);
