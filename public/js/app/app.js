@@ -156,7 +156,6 @@ function appSocketOnReset(data){
   freeMode = data.freemode;
   puckID = data.id;
   var visName = data.visualizer;
-  visName = 'cardinal';
 
   if (freeMode) {
     Math.seedrandom(Math.random());
