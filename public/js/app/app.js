@@ -63,6 +63,14 @@ var visualizers = {
   'particles' :  {
     'name' : 'Particles',
     'constructor' : ParticleEsplode
+  },
+  'cardinal' :  {
+    'name' : 'Cardinals',
+    'constructor' : CardinalViz
+  },
+  'ribbons' :  {
+    'name' : 'Ribbons',
+    'constructor' : RibbonsViz
   }
 };
 

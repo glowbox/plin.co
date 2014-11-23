@@ -11,6 +11,12 @@ var visualizers = {
   },
   'particles' :  {
     'name' : 'Particles'
+  },
+  'cardinal' :  {
+    'name' : 'Cardinal'
+  },
+  'ribbons' :  {
+    'name' : 'Ribbons'
   }
 };
 
