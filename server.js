@@ -420,7 +420,7 @@ app.get(/^\/([a-z]{3}).png$/, function(req, res) {
 
 app.post('/play', function(req, res) {
   serialFakeTest(req.body.skip);
-  return res.send('success!');
+  return res.send('success! skip:' + req.body.skip);
 });
 
 app.post('/end-run/', function(req, res) {
@@ -438,7 +438,9 @@ app.post('/change-mode/', function(req, res) {
     history[history.length - 1]['visualizer'] = req.body.visualizer;
     updateSocketHistory();
   }
-  endDrop();
+  if(isRunning){
+    endDrop();
+  }
   if (history.length) {
     console.log('--', history[history.length - 1]['complete']);
     if (history[history.length - 1]['complete'] == 'progress') {

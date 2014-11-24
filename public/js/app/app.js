@@ -90,21 +90,20 @@ $(function() {
     socket.on('connect', appSocketOnConnect);
   }
 
-  camera = new THREE.PerspectiveCamera( 75, BOARD_RATIO, 1, 10000 );
-  camera.position.z = 100;
+  camera = new THREE.PerspectiveCamera( 40, BOARD_RATIO, 1, 10000 );
+  camera.position.z = 48;
   camera.lookAt(new THREE.Vector3(0,0,0));
 
   scene = new THREE.Scene();
 
-  renderer = new THREE.CanvasRenderer();
+  renderer = new THREE.WebGLRenderer();
   renderer.setClearColor( 0x000000 );
   renderer.setSize( renderSize.width, renderSize.height );
 
-  document.body.appendChild( renderer.domElement );
-
-  displayCanvas = document.getElementsByTagName('canvas')[0];
+  displayCanvas = document.createElement('canvas');
   displayCanvas.setAttribute('id', 'canvas');
   displayContext = displayCanvas.getContext('2d');
+  document.body.appendChild( displayCanvas );
 
   // create the temporary canvas to scale down captured frames.
   uploadCanvas = document.createElement('canvas');
@@ -174,6 +173,12 @@ function appSocketOnReset(data){
   }
   
   viz.destroy();
+
+  // make sure the three.js scene is empty.
+  while(scene.children.length){
+    scene.remove(scene.children[0]);
+  }
+
   viz = createVisualizer(visName);
   pngs = [];
 
@@ -350,7 +355,11 @@ function animate(deltaTime) {
   viz.render(displayContext, deltaTime);
   displayContext.restore();
 
-  renderer.render( scene, camera );
+  // draw three.js scene if it's not empty.
+  if(scene.children.length > 0){
+    renderer.render( scene, camera );
+    displayContext.drawImage( renderer.domElement, 0, 0, renderer.domElement.width, renderer.domElement.height, 0, 0, displayCanvas.width, displayCanvas.height);
+  }
 
   // render calibration overlay
   if(isLive){
@@ -449,9 +458,9 @@ function onWindowResize() {
   updateRenderSize();
   resizeCanvas();
 
-  camera.aspect = BOARD_RATIO;
-  camera.updateProjectionMatrix();
-  renderer.setSize( renderSize.width, renderSize.height );
+  //camera.aspect = BOARD_RATIO;
+  //camera.updateProjectionMatrix();
+  //renderer.setSize( renderSize.width, renderSize.height );
 }
 
 

@@ -19,7 +19,7 @@ function VoronoiViz(board, puckID) {
   this.fillColors = [];
 
   this.voronoi = d3.geom.voronoi()
-    .clipExtent([[1, 1], [board.width+10, board.height+10]]);
+    .clipExtent([[-10, -10], [board.width+10, board.height+10]]);
 
   console.log(board.width, board.height);
   this.colors = [];
