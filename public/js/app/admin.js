@@ -17,6 +17,9 @@ var visualizers = {
   },
   'ribbons' :  {
     'name' : 'Ribbons'
+  },
+  'strum' :  {
+    'name' : 'Strum'
   }
 };
 
