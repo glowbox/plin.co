@@ -76,20 +76,9 @@ function StrumViz(board, puckID) {
         var b = this.strums[i].tick + this.strums[i].offset;
         var a=((Math.sin(b*0.1+i*0.04)+1)*127.5)
         this.context.strokeStyle = 'rgba(' + this.strums[i].color.r + ', ' + this.strums[i].color.g + ', ' + this.strums[i].color.b + ', ' + 1 + ')';
-        this.context.beginPath();
-        // this.context.moveTo(this.strums[i].coor.x, this.strums[i].coor.y);
-        // var dir = Math.random();
-        // if (dir < .25) {
-        //   this.context.lineTo(0, Math.random() * this.board.height);
-        // } else if (dir < .5) {
-        //   this.context.lineTo(canvas.width, Math.random() * canvas.height);
-        // } else if (dir < .75) {
-        //   this.context.lineTo(Math.random() * canvas.width, 0);
-        // } else {
-        //   this.context.lineTo(Math.random() * canvas.width, canvas.height);
-        // }
-        // this.context.lineTo(0, 0);
+
         var x=(Math.sin(j*0.01+b*0.02)*Math.sin(j*0.003+b*0.004)*this.board.width);
+        var y=(Math.sin(i*0.01+b*0.02)*Math.sin(i*0.003+b*0.004)*this.board.height);
         this.context.beginPath();
         this.context.moveTo(cx+x,0);
         this.context.lineTo(cx+x,h);
@@ -98,6 +87,24 @@ function StrumViz(board, puckID) {
         this.context.moveTo(cx-x,0);
         this.context.lineTo(cx-x,h);
         this.context.stroke();
+
+        // this.context.beginPath();
+        // this.context.moveTo(this.strums[i].coor.x+x,0);
+        // this.context.lineTo(this.strums[i].coor.x+x,this.board.height);
+        // this.context.stroke();
+        // this.context.beginPath();
+        // this.context.moveTo(this.strums[i].coor.x-x,0);
+        // this.context.lineTo(this.strums[i].coor.x-x,this.board.height);
+        // this.context.stroke();
+
+        // this.context.beginPath();
+        // this.context.moveTo(0, this.strums[i].coor.y+y);
+        // this.context.lineTo(this.board.width, this.strums[i].coor.y+y);
+        // this.context.stroke();
+        // this.context.beginPath();
+        // this.context.moveTo(0, this.strums[i].coor.y-y);
+        // this.context.lineTo(this.board.width, this.strums[i].coor.y-y);
+        // this.context.stroke();
         
 
       }
