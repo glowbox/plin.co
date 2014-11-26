@@ -82,6 +82,10 @@ var visualizers = {
   'strum' :  {
     'name' : 'Strum',
     'constructor' : StrumViz
+  },
+  'catsCradle' :  {
+    'name' : 'Cat\s Cradle',
+    'constructor' : CatsCradle
   }
 };
 var currVisualizer;

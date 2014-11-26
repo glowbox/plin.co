@@ -565,7 +565,7 @@ function serialFakeTest(skip) {
       startDrop();
     }, 1000);
   }
-  var tempPegs = [11, 7, 19, 8, 26, 32, 38, 45, 51, 58, 64, 71, 77, 84];
+  var tempPegs = [11, 7, 8, 32, 38, 45, 51, 58, 64, 71, 77, 84];
   for (var h = 0; h < tempPegs.length; h++) {
     for (var i = 0; i < 85; i++) {
       if (pegMap[i.toString()] == tempPegs[h]) {

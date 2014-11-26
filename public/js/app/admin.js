@@ -20,6 +20,9 @@ var visualizers = {
   },
   'strum' :  {
     'name' : 'Strum'
+  },
+  'catsCradle' :  {
+    'name' : 'Cat\'s Cradle'
   }
 };
 
