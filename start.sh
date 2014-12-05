@@ -1,0 +1,1 @@
+foreman start -f Procfile_dev -e dev.env
