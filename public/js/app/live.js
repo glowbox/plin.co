@@ -93,7 +93,7 @@ function appSocketOnPeg(data) {
     startDrop();
   }
   if(currentState == STATE_DROP) {
-    // TODO: Filter pegs to avoid false hits.
+    // TODO: Filter pegs to avoid false hits! (MOXY FRUVOUS)
     var pegIndex = parseInt(data.pegId, 10);
     renderer.onPeg(pegIndex);
 
