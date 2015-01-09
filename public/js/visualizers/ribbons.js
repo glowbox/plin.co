@@ -7,9 +7,6 @@ function RibbonsViz(board, puckID) {
   this.points = [];
   this.delay = 20;
 
-  this.gifLength = 15000;
-  this.framesPerSecond = 3;
-  this.name = "ribbons";
 
   this.lCol = "#ff0000";
   this.dCol = "#00ff00";
@@ -39,8 +36,8 @@ function RibbonsViz(board, puckID) {
 
   }
 
-  this.hit = function(runCurr, index) {
-    var coor = this.board.getPinCoordinates(index);
+  this.hit = function(pegIndex) {
+    var coor = this.board.getPinCoordinates(pegIndex);
     for(var i = 0; i < 4; i++) {
       this.points.push({x:coor.x, y:coor.y, vx:Math.random() * .04 - .02, vy:Math.random() * .04 - .02,
         color: this.colorValues[Math.floor(this.colorValues.length * Math.random())]});

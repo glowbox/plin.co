@@ -62,8 +62,6 @@ function CardinalViz(board, puckID) {
   this.board = board;
   this.puckID = puckID;
 
-  this.gifLength = 9000;
-  this.framesPerSecond = 5;
   this.name = "cardinal";
 
   this.imagedata;
@@ -139,8 +137,8 @@ function CardinalViz(board, puckID) {
     return true;
   }
 
-  this.hit = function(runCurr, index) {
-    var coor = this.board.getPinCoordinates(index);
+  this.hit = function(pegIndex) {
+    var coor = this.board.getPinCoordinates(pegIndex);
 
     for (var i = 0; i < 20; i++) {
       var colorHex = this.colorValues[Math.floor(Math.random() * this.colorValues.length)];

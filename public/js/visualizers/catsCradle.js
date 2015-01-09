@@ -3,8 +3,6 @@ function CatsCradle(board, puckID) {
   this.board = board;
   this.puckID = puckID;
 
-  this.gifLength = 7000;
-  this.framesPerSecond = 8;
   this.name = "catsCradle";
 
   this.radius;
@@ -31,7 +29,6 @@ function CatsCradle(board, puckID) {
   this.render = function(context, deltaTime) {
     this.context = context;
     this.context.lineWidth = .1;
-    this.context.clearRect(0, 0, canvas.width, canvas.height);
     
     for (var i = 0; i < this.points.length; i++) {
       this.points[i].tick += .01 * this.points[i].speed;
@@ -42,8 +39,8 @@ function CatsCradle(board, puckID) {
     }
   }
 
-  this.hit = function(runCurr, index) {
-    var coor = this.board.getPinCoordinates(index);
+  this.hit = function(pegIndex) {
+    var coor = this.board.getPinCoordinates(pegIndex);
     
     this.points.push({
       x: coor.x,

@@ -323,8 +323,6 @@ function BirdsViz(board, puckID) {
   this.puckID = puckID;
   this.double = true;
 
-  this.gifLength = 12000;
-  this.framesPerSecond = 4;
   this.name = "birds";
   
   this.birds = [];
@@ -363,43 +361,50 @@ function BirdsViz(board, puckID) {
       }
 
       var hemiLight = new THREE.HemisphereLight( 0xffffff, 0xffffff, 0.6 );
-        hemiLight.color.setHSL( 0.6, 1, 0.6 );
-        hemiLight.groundColor.setHSL( 0.095, 1, 0.75 );
-        hemiLight.position.set( 0, 500, 0 );
-        scene.add( hemiLight );
+      hemiLight.color.setHSL( 0.6, 1, 0.6 );
+      hemiLight.groundColor.setHSL( 0.095, 1, 0.75 );
+      hemiLight.position.set( 0, 500, 0 );
+      scene.add( hemiLight );
 
       var dirLight = new THREE.DirectionalLight( 0xffffff, 1 );
-        dirLight.color.setHSL( 0.1, 1, 0.95 );
-        dirLight.position.set( -1, 1.75, 1 );
-        dirLight.position.multiplyScalar( 50 );
-        scene.add( dirLight );
-     // scene.add(new THREE.HemisphereLight());
+      dirLight.color.setHSL( 0.1, 1, 0.95 );
+      dirLight.position.set( -1, 1.75, 1 );
+      dirLight.position.multiplyScalar( 50 );
+      scene.add( dirLight );
 
       plane = new THREE.Mesh(
-          new THREE.PlaneBufferGeometry( board.width, board.height, 8, 8 ),
+          new THREE.PlaneBufferGeometry(200, 200, 20, 20 ),
           new THREE.MeshBasicMaterial( { emissive: 0x00ff00,wireframe:true, opacity: 1, transparent: true } )
       );
-      plane.visible = false;
+      plane.lookAt(camera.position);
+      //plane.visible = false;
       scene.add( plane );
+      var origin = new THREE.Mesh( new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial( { color:'#00ff00'} ) );
+      scene.add(origin);
 
+      // Determine pin coordinates in world-space.
+      // todo: Refactor this out of the visualizer so anybody can use it.
       var v3 = new THREE.Vector3();
-
       for(var i = 0; i < board.pegs.length; i++){
         var coor = board.getPinCoordinates(i);
 
         v3.set( ((coor.x / board.width) * 2) - 1, ((coor.y / board.height) * 2) - 1, camera.near);
-        v3.y *= -1;
+        v3.y *= -1; // not sure why, but things are upside down after projecting.
         v3.unproject(camera);
 
+        // cast a ray to see where pins end up at the x/y plane located at the origin.
         var raycaster = new THREE.Raycaster( camera.position, v3.sub( camera.position ).normalize() );
         var intersects = raycaster.intersectObject( plane );
 
         if(intersects.length ){
+
           var peg = new THREE.Mesh( new THREE.BoxGeometry(0.1,0.1,1), new THREE.MeshBasicMaterial( { color:'#ffff00'} ) );
+          
           peg.position.copy(intersects[ 0 ].point);
-          peg.position.z = 0;
+          //peg.position.z = 0;
           peg.name = "peg"+i;
-          peg.visible = false;
+          //peg.visible = false;
+          
           scene.add(peg);
         }
       }
@@ -449,7 +454,7 @@ function BirdsViz(board, puckID) {
     }
   }
 
-  this.hit = function(runCurr, index) {
+  this.hit = function(index) {
     var peg = new THREE.Mesh( new THREE.BoxGeometry(1,1,1), new THREE.MeshPhongMaterial( { sides:THREE.BothSides, transparent:true, opacity:0.6, color:'#ff0000', shininess:90} ) );
     peg.position.copy(scene.getObjectByName("peg"+index).position);
     scene.add(peg);

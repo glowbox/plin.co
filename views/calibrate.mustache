@@ -1,16 +1,9 @@
 {{> header}}
 <script>
-  var isLive = false;
-  var map = {{{map}}};
+  var map = {{{pegMap}}};
 </script>
-<button type="button" class="btn btn-default btn-danger start-calib" style="z-index: 1000;
+<button type="button" class="btn btn-default btn-warning save-calib" style="z-index: 1000;
 position: relative;">
-  Start Calibrating
-</button>
-<button type="button" class="btn btn-default btn-danger stop-calib" style="z-index: 1000;
-position: relative; ">
-  Stop Calibrating
-</button>
-<br>
-Selected Peg: <label id="selected-peg-index">n/a</label>
+  Save Calibration
+</button> Selected Peg: <label id="selected-peg-index">n/a</label>
 {{> footer}}

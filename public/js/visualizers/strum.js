@@ -3,8 +3,6 @@ function StrumViz(board, puckID) {
   this.board = board;
   this.puckID = puckID;
 
-  this.gifLength = 7000;
-  this.framesPerSecond = 8;
   this.name = "strum";
 
   this.strums = [];
@@ -29,8 +27,6 @@ function StrumViz(board, puckID) {
   this.render = function(context, deltaTime) {
     this.context = context;
    
-    this.context.clearRect(0, 0, canvas.width, canvas.height);
-    // this.context.fillText(~~delay +'ms / ' +  (1000/ delay | 0) + 'fps', 50, 50);
     this.context.strokeStyle="white";
     this.context.lineWidth = .1;
 
@@ -79,8 +75,8 @@ function StrumViz(board, puckID) {
     }
   }
 
-  this.hit = function(runCurr, index) {
-    var coor = this.board.getPinCoordinates(index);
+  this.hit = function(pegIndex) {
+    var coor = this.board.getPinCoordinates(pegIndex);
     this.strums.push({
       'num': this.strums.length ? 10 : 300,
       'color': hexToRgb(this.colorValues[Math.floor(this.colorValues.length * Math.random())]),

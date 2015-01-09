@@ -1,0 +1,16 @@
+{{> header}}
+<div id="debug" style="color:white; position:absolute; top:0px; right:0px; padding:20px;">foo</div>
+<div id="status" style="width:400px; height:400px; background:#303030; color:#a0a0a0">
+  <div id="status-idle">Drop a puck or choose a visualization!</div>
+  <div id="status-drop">OMG IT'S A PLIN.CO!</div>
+  <div id="status-uploading">Uploading your drop, please wait.</div>
+  <div id="status-post-drop">
+  	Tweet your awesome animation<br>
+  	@ <input type="text" id="twitterName"/>
+	</div>
+</div>
+<script>
+  var puckId = '{{nextId}}';
+</script>
+<script src="/js/lib/maptastic.min.js"></script>
+{{> footer}}

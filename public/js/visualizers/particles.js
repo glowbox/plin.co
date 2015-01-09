@@ -114,8 +114,6 @@ function ParticleEsplode(board, puckID) {
   this.board = board;
   this.puckID = puckID;
 
-  this.gifLength = 7000;
-  this.framesPerSecond = 10;
   this.name = "particles";
 
   var worldScale = 10;
@@ -331,7 +329,7 @@ if(this.useDefaultRenderer) {
  
   this.addObsticles();
 
-  this.addParticles = function(x, y, runCurr) {
+  this.addParticles = function(x, y) {
     for(var i = 0; i < 3; i++){
       var colorIndex = Math.floor(Math.random() * this.colors.length);
       if(Math.random() > 0.5){
@@ -370,9 +368,9 @@ if(this.useDefaultRenderer) {
     }
   }
 
-  this.hit = function(runCurr, index) {
+  this.hit = function(index) {
     var coor = board.getPinCoordinates(index);
-    this.addParticles(coor.x , coor.y, runCurr);
+    this.addParticles(coor.x , coor.y);
   },
 
   this.render = function(context, delta) {

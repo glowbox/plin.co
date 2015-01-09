@@ -4,9 +4,6 @@ function AttractMode(board, puckID) {
   this.board = board;
   this.puckID = puckID;
 
-  this.gifLength = 8000;
-  this.framesPerSecond = 5;
-
   this.colors = [];
 
   this.pegRanges = [];
@@ -83,7 +80,7 @@ function AttractMode(board, puckID) {
   this.render = function(context) {
 
     context.fillStyle = "rgba(0,0,0,0.1)";
-    context.fillRect(0, 0, board.width, board.height);
+    context.fillRect(0, 0, board.width, board.height+1);
     context.strokeStyle = "rgba(255,255,255,1)";
     
     for(var i = 0; i < this.particles.length; i++) {

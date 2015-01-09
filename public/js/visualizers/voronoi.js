@@ -4,8 +4,6 @@ function VoronoiViz(board, puckID) {
   this.board = board;
   this.puckID = puckID;
 
-  this.gifLength = 8000;
-  this.framesPerSecond = 5;
   this.name = "voronoi";
 
   this.lastHit = {x: -1, y: -1};
@@ -21,7 +19,6 @@ function VoronoiViz(board, puckID) {
   this.voronoi = d3.geom.voronoi()
     .clipExtent([[-10, -10], [board.width+10, board.height+10]]);
 
-  console.log(board.width, board.height);
   this.colors = [];
   this.random = new Math.seedrandom(this.puckID);
 
@@ -48,11 +45,9 @@ function VoronoiViz(board, puckID) {
   }
   // this.lastHit = {x:this.points[0][0], y:this.points[0][1]}
 
-  canvas.className = '';
+  this.hit = function(pegId) {
 
-  this.hit = function(runCurr, index) {
-
-    var coor = board.getPinCoordinates(index);
+    var coor = board.getPinCoordinates(pegId);
 
     if (this.lastHit.x == -1 && this.lastHit.y == -1) {
       this.lastHit = {x:coor.x, y:coor.y}
@@ -100,8 +95,6 @@ function VoronoiViz(board, puckID) {
   this.render = function(context) {
     
     this.updateVoronoi();
-    
-    context.clearRect(0, 0, board.width, board.height);
 
     for (var k = 0, l = this.colors.length; k < l; ++k) {
       context.fillStyle = this.colors[k];

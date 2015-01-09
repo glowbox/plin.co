@@ -1,0 +1,1 @@
+web: supervisor -w .,scenes/*/.,views/.,views/*/. -e html,js,json,mustache game-server.js
