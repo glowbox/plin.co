@@ -11,6 +11,8 @@ var PlincoRenderer = function() {
   var scene;
   var renderer;
 
+  var showPegs = false;
+
   var BOARD_RATIO = 36 / 57.25;
 
   // Height of the canvas to render board content.
@@ -79,6 +81,18 @@ var PlincoRenderer = function() {
     displayContext.scale(scale, scale);
     visualizer.render(displayContext, deltaTime);
     
+    if(showPegs) {
+      displayContext.fillStyle = "white";
+      for(var i = 0; i < 85; i++){
+        var position = board.getPinCoordinates(i);
+
+        displayContext.beginPath();
+        displayContext.arc(position.x, position.y, 0.25, 0, 2*Math.PI, false);
+        displayContext.fill();
+        displayContext.closePath();
+      }
+    }
+
     displayContext.restore();
 
     // draw three.js scene if it's not empty.
@@ -111,6 +125,9 @@ var PlincoRenderer = function() {
     'setVisualizer' : setVisualizer,
     'getBoardRatio' : function() {
       return BOARD_RATIO;
+    },
+    'togglePegVisibility' : function(){
+      showPegs = !showPegs;
     }
   };
 }
