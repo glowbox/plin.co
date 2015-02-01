@@ -1,11 +1,17 @@
 var currCircle;
 var lastCircle;
 
+var selectedPegIndex = 0;
+
+var changedPegs = [];
+var board;
+
 $(function() {
   
-  var board = new Board();
+  board = new Board();
 
   var currPeg = 0;
+
   two = new Two({
     type: Two.Types['svg'],
     width: board.width,
@@ -48,41 +54,158 @@ $(function() {
     }
   }).play();
 
-  var boardSvg = board.showPegs(function(e) {
-    console.log(e);
-    currPeg = $(this).attr("data-index");
-    
-    var coors = board.getPinCoordinates(currPeg);
+  function setSelectedPeg(index) {
+
+    selectedPegIndex = index;
+    console.log("Setting selected peg: " + index);
+    var coors = board.getPinCoordinates(index);
 
     currCircle.translation.x = coors.x;
     currCircle.translation.y = coors.y;
+
     currCircle.visible = true;
-    $("#selected-peg-index").html(currPeg);
-    $.post('/pin-calib/', {'peg': currPeg});
+    lastCircle.visible = false;
+    
+    var mapped = [];
+    for(var m in map) {
+      if(map[m] == index) {
+        mapped.push(m);
+      }
+    }
+    var mapList = (mapped.length > 0) ? mapped.join(', ') : "NONE";
+    $("#selected-peg-index").html(index + ' (mapped code: ' + mapList + ')'); 
+  }
+
+  var boardSvg = board.showPegs(function(e) {
+    setSelectedPeg(parseInt($(this).attr("data-index"), 10));
   });
 
-  $('.start-calib').bind('touch, mousedown', function(e) {
-    $.post('/start-calib/');
-  })
-  $('.stop-calib').bind('touch, mousedown', function(e) {
-    $.post('/stop-calib/');
-    currCircle.visible = false;
-    lastCircle.visible = false;
+  $('.save-calib').bind('touch, mousedown', function(e) {
+    var response = confirm("Are you ABSOLUTELY SURE you want to save?");
+    if(response){
+      $.post("/save-calibration", {'map': JSON.stringify(map) });
+      changedPegs = [];
+      updatePegState();
+    }
+  });
+
+
+
+
+
+  $(document.body).on('keydown', function(e){
+    if(e.keyCode == 9){
+      selectedPegIndex++;
+      if(selectedPegIndex >= board.numPegs){
+        selectedPegIndex = 0;
+      }
+      setSelectedPeg(selectedPegIndex);
+      e.preventDefault();
+      return false;
+    }
   })
 
-  var socket = io('http://localhost');
-  socket.on('connect', function(){
-    console.log('connected!');
 
-    socket.on('peg', function(data){
-      console.log('peg data: ' + data);
-      var coors = board.getPinCoordinates(parseInt(data.index, 10));
+  var socket = io('http://localhost', { transports: ['websocket'] } );
+  socket.on('connect', function() {
+    socket.on('peg', function(data) {
+      var coors = board.getPinCoordinates(selectedPegIndex);
+      
       lastCircle.translation.x = coors.x;
       lastCircle.translation.y = coors.y;
+
       lastCircle.scale = 1.5;
       lastCircle.visible = true;
+
+      // remove any instances of this peg.
+      for(var code in map){
+        if(map[code] == selectedPegIndex){
+          map[code] = -1;
+        }
+      }
+
+      console.log(data);
+
+      map[data.raw] = selectedPegIndex;
+      changedPegs.push(selectedPegIndex);
+
+      updatePegState();
     });
     
     socket.on('disconnect', function(){});
   });
+
+  updatePegState();
 })
+
+function checkIntegrity() { 
+  var missingPegs = [];
+  var missingCodes = [];
+  var duplicatePegs = [];
+
+  // Make sure there are 85 codes.
+  for(var code = 0; code < 85; code++){
+    if(!map.hasOwnProperty(code)) {
+      missingCodes.push(code);
+    }
+  }
+
+  // Make sure one of each peg exists in the map.
+  for(var peg = 0; peg < 85; peg++) {
+    
+    var found = false;
+    var count = 0;
+
+    var pegMapping = [];
+
+    for(var code in map) {
+      if(map[code] == peg) {
+        count++;
+        pegMapping.push(code);
+        found = true;
+      }
+    }
+    
+    if(count > 1){
+      duplicatePegs.push(peg + '=>' + pegMapping.join(", "));        
+    }
+
+    if(!found){
+      missingPegs.push(peg);
+    }
+  }
+
+  console.log("Missing codes:" + missingCodes.join(", "))
+  console.log("Missing pegs:" + missingPegs.join(", "))
+  console.log("Duplicate pegs:" + duplicatePegs.join("| "))
+}
+
+function resetPegs() {
+  for(var peg = 0; peg < 85; peg++) {
+    map[peg] = -1;
+  }
+}
+
+  function updatePegState(){
+    for(var i = 0; i < board.numPegs; i++){
+      var color = 'rgba(255,0,0,1)';
+      
+      var count = 0;
+      for(var code in map){
+        if(map[code] == i) {
+          count++;
+        }
+      }
+      if(count == 1) {
+        color = 'rgba(255,255,255,1)';
+      } else if(count > 1) {
+        color = 'rgba(255,128,0,1)';
+      }
+
+      if(changedPegs.indexOf(i) != -1){
+        color = 'rgba(0, 200, 200,1)';
+      }
+
+      $('#peg-' + i).attr('fill', color);
+    }
+  }

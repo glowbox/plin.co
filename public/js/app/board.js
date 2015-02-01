@@ -74,6 +74,7 @@ function Board() {
       var peg = two.makeCircle(this.pegs[i].x, this.pegs[i].y, 0.3);
       peg.fill = 'rgba(255, 255, 255, 1)';
       peg.linewidth = 0;
+      peg.id = 'peg-' + i;
       two.update();
 
       if(typeof(clickHandler) == 'function'){
@@ -88,6 +89,9 @@ function Board() {
   }
 
   this.getPinCoordinates = function(index) {
+    if(!this.pegs[index]){
+      console.log("ERROR: getPinCoordinates called for invalid pin index: " + index);
+    }
     return {
       x: this.pegs[index].x,
       y: this.pegs[index].y

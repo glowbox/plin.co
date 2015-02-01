@@ -1,0 +1,1 @@
+foreman start -f ProcfilLive_dev -e dev.env

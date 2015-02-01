@@ -1,0 +1,36 @@
+{{> header}}
+<div id="debug" style="color:white; position:absolute; top:0px; right:0px; padding:20px;">foo</div>
+<div id="status">
+  <div class="status-panel" id="status-idle">
+
+		<div id="continue-message">drop a puck to start</div>
+
+  	<div id="twitter">
+
+			<div id="twitter-title">Check out the replay:</div>
+			<div id="replay-url">http://plin.co/<span id="replay-id"></span></div>
+
+  		<div id="twitter-title">Tag yoruself in the pin.co tweet:</div>
+  		<div id="twitter-input">@<span id="twitter-name"></span><span id="placeholder">[twitter handle]</span></div>
+  		<!-- <div id="twitter-preview"></div> -->
+  	</div>
+
+  	<div id="next-visualizer">
+	  	<div id="visualizer-label">Next Board</div>
+	  	<div id="visualizer-options"></div>
+  	</div>
+
+
+  </div>
+  <div class="status-panel"id="status-drop"></div>
+  <div class="status-panel" id="status-uploading">UPLOADING...
+  	<div id="upload-progress"></div>
+  </div>
+  <!-- <div class="status-panel" id="status-post-drop">
+	</div> -->
+</div>
+<script>
+  var puckId = '{{nextId}}';
+</script>
+<script src="/js/lib/maptastic.min.js"></script>
+{{> footer}}
