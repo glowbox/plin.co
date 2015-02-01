@@ -166,7 +166,7 @@ function startDrop() {
   setState(STATE_DROP);
 
   dropData = {
-    id: lastPuckId,
+    id: puckId,
     visualizer: currentVisualizer,
     time: new Date().getTime(),
     pegs: []
@@ -243,7 +243,7 @@ function appKeyDown(e) {
       case 13: // 'enter' key
         if(twitterName.length > 0){
           $.post('/tweet-run/', {
-            'id':puckId,
+            'id':lastPuckId,
             'user':twitterName
           }, function(data){
             twitterName = '';
@@ -410,7 +410,8 @@ function onCaptureComplete() {
 
 
 function uploadDrop() {
-  if (DEBUG) console.log('calling save-run', new Date().getTime());
+  if (DEBUG) console.log('calling save-run, id: ' + puckId, new Date().getTime());
+
   $.post('/save-run', {
       'id': puckId,
       'data': JSON.stringify(dropData)
