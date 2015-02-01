@@ -229,9 +229,9 @@ function appKeyDown(e) {
       }
       break;
 
-      case 38: // UP arrow.
+      case 32: // Spacebar
       {
-         
+         renderer.togglePegVisibility();
       }
       break;
     }
