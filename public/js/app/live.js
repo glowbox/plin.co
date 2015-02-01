@@ -26,7 +26,7 @@ var lastPuckId = null;
 var currentVisualizer = 'attract-mode';
 var renderer;
 
-var IDLE_TIMEOUT_INTERVAL = 30 * 1000 * 40;
+var IDLE_TIMEOUT_INTERVAL = 30 * 1000;
 var idleTimeout = 0;
 
 var STATE_IDLE = 'idle';
@@ -201,7 +201,7 @@ function appKeyDown(e) {
     var newVisualizer = currentVisualizer;
 
     switch(e.keyCode) {
-      case 37: // Left Arrow
+      case 40: // DOWN Arrow
       {
         selectedVisualizer--;
         if(selectedVisualizer < 0){

@@ -13,6 +13,7 @@ var knox = require('knox');
 var request = require('request');
 var PNG = require('png-js');
 var GIFEncoder = require('gifencoder');
+var redis = require('redis');
 
 var TMP_GIF_PATH = __dirname + '/tmp/';
 
@@ -97,6 +98,7 @@ if (process.env.SERIAL_PORT) {
   }, false);
 
   serialPort.open(function () {
+    debug("SERIAL PORT OPENED");
     serialPort.on('data', serialReceived);
   });
 }
@@ -110,11 +112,11 @@ function serialReceived(data) {
     var pegCode = codes.charCodeAt(i) - 32;
     io.emit('peg', {'pegId': pegMap[pegCode], 'raw': pegCode});
   }
+  debug("Peg hit: " + data);
 }
 
 
 if (process.env.REDISCLOUD_URL) {
-  var redis = require('redis');
   var url = require('url');
   var redisURL = url.parse(process.env.REDISCLOUD_URL);
   
