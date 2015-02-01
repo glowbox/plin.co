@@ -347,7 +347,11 @@ function encodeFrame() {
     // get rid of the 0-th item in the queue
     encoderQueue.splice(0, 1);
  
-    encoderFinished(puckId);
+    
+    setTimeout(function(){
+      encoderFinished(puckId);
+    }, 10);
+
     debug("Finished encoding GIF for id: " + puckId);
 
     // start watchign the queue again.
@@ -363,6 +367,7 @@ function encodeFrame() {
  * Called when a GIF is done being encoded for a drop.
  */
 function encoderFinished(puckId){
+  saveGIF(puckId);
   postAllTweetsForDrop(puckId);
 }
 
@@ -385,10 +390,19 @@ function checkEncoderQueue() {
  */
 function saveGIF(id) {
   var gifName = id + '.gif';
+ 
+  debug("About to upload to S3: " + (TMP_GIF_PATH + gifName));
+  
+  while(fs.statSync(TMP_GIF_PATH + gifName)["size"] <= 0){
+    console.log("waitin...");
+  }
+  //var stats = fs.statSync(TMP_GIF_PATH + gifName);
+ // debug("File size: " + stats['size']);
+ 
   knoxClient.putFile(TMP_GIF_PATH + gifName, gifName, function(err, res){
     debug('File uploaded to S3: ' + gifName);
     if (config.POST_TWEET) {
-      postTweet(id);
+      postTweet(id, null);
     } 
   });
 }
@@ -420,9 +434,6 @@ function getNextId(_callback) {
  * sent out until the encoding is finished.
  */
 function addTweetToDrop(dropId, userName) {
-   // TODO: Actually DO the tweeting.
-  debug('TODO: TWEET SOMETHING FOR ID: ' + dropId + ', recipient: ' + userName);
-
   // Save twitter ID into the list for this run.
   dbClient.get(dropId, function (e, r) {
     if (r) {
@@ -474,8 +485,31 @@ function postAllTweetsForDrop(dropId){
 /*
  * Hit the twitter API and post a tweet for a given drop.
  */
-function postTweet(dropId, userName){
-  debug('TODO: Hit the twitter api, puck: ' + dropId + ', user: ' + userName);
+function postTweet(puckId, userName){
+ 
+   if (twitterRestClient) {
+
+    var status = 'Another round played at Byte Me 4.0! Check out the replay at http://plin.co/' + puckId;
+    
+    if (userName != null) {
+      status = 'Thanks for playing at Byte Me 4.0, @' + userName + '. Check out the replay at http://plin.co/' + puckId;
+    }
+    
+    twitterRestClient.statusesUpdateWithMedia(
+      {
+        'status': status,
+        'media[]': TMP_GIF_PATH + puckId + '.gif'
+      },
+      function(error, result) {
+        if (error) {
+          debug('Error: ' + (error.code ? error.code + ' ' + error.message : error.message));
+        }
+        if (result) {
+          // console.log(result);
+        }
+      }
+    );
+  }
 }
 
 
