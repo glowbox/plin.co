@@ -252,11 +252,13 @@ app.post('/tweet-run', function(req, res) {
 /*
  * Handle image upload.
  */
-app.post('/upload', function(req, res){
+app.post('/upload', function(req, res) {
   // Parse PNG data and add the frame to the GIF encoder.
   var pngData = req.body.png;
   var pngData = pngData.replace(/^data:image\/\w+;base64,/, "");
   var buffer = new Buffer(pngData, 'base64');
+  
+
   var png = new PNG(buffer);
 
   png.decode(function(pixelData) {
@@ -267,7 +269,9 @@ app.post('/upload', function(req, res){
     //       doesn't keep track of the dropID, this system assumes only one
     //       client at a time.
     uploadFrameQueue.push(pixelData);
-  
+
+    
+    
     if(req.body.frame >= req.body.frameCount - 1){
       var encoderItem = {};
 
@@ -280,11 +284,11 @@ app.post('/upload', function(req, res){
 
       encoderQueue.push(encoderItem);
     }
+
+    debug('Added frame to queue.');
+    res.send('Added Frame to queue!'); 
   });
 
-  debug('Adding frame to queue.');
-
-  return res.send('success!');
 });
 
 
@@ -338,7 +342,6 @@ function encodeFrame() {
     encoder.finish();
     encoder = null;
    
-
     // get rid of the 0-th item in the queue
     encoderQueue.splice(0, 1);
  
@@ -416,16 +419,20 @@ function getNextId(_callback) {
  */
 function addTweetToDrop(dropId, userName) {
    // TODO: Actually DO the tweeting.
-//  debug('TODO: TWEET SOMETHING FOR ID: ' + dropId + ', recipient: ' + userName);
+  debug('TODO: TWEET SOMETHING FOR ID: ' + dropId + ', recipient: ' + userName);
 
   // Save twitter ID into the list for this run.
   dbClient.get(dropId, function (e, r) {
     if (r) {
-      
       var runData = JSON.parse(r);
-      runData.twitter.push(userName);
-  
-      dbClient.set(dropId, JSON.stringify(runData), redis.print);
+      if(runData.twitter.indexOf(userName.toLowerCase()) == -1) {
+        runData.twitter.push(userName.toLowerCase());
+        dbClient.set(dropId, JSON.stringify(runData), redis.print);
+      } else {
+        debug("User is already in the twitter list.");
+      }
+    } else {
+      debug("Unable to add tweet to drop: " + dropId + ", drop not found.");
     }
   });
 
@@ -468,6 +475,7 @@ function postAllTweetsForDrop(dropId){
 function postTweet(dropId, userName){
   debug('TODO: Hit the twitter api, puck: ' + dropId + ', user: ' + userName);
 }
+
 
 /*
 

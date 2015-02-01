@@ -19,12 +19,14 @@ var dropData = {
   pegs: []
 };
 
+var twitterName = '';
+
 var lastPuckId = null;
 
 var currentVisualizer = 'attract-mode';
 var renderer;
 
-var IDLE_TIMEOUT_INTERVAL = 30 * 1000;
+var IDLE_TIMEOUT_INTERVAL = 30 * 1000 * 40;
 var idleTimeout = 0;
 
 var STATE_IDLE = 'idle';
@@ -37,6 +39,36 @@ var currentState = 'INVALID';
 
 var DEBUG = true;
 var fakePeg = 0; // used to spoof pegs via key press
+
+var visualizerChoices = [
+  {
+    name: "Voronoi",
+    id:"voronoi"
+  },
+  {
+    name: "Particles",
+    id:"particles"
+  },
+  {
+    name: "Random",
+    id:"_random"
+  },
+  {
+    name: "Cardinal",
+    id:"cardinal"
+  },
+  {
+    name: "Ribbons",
+    id:"ribbons"
+  }
+];
+
+
+var selectedVisualizer = 2;
+var visualizerItemWidth = 160;
+var visualizerOffsetX = 0;
+var hideVisualizerSelectionTimeout = null;
+
 
 $(function() {
   Math.seedrandom(puckId);
@@ -72,6 +104,16 @@ $(function() {
   setState(STATE_IDLE);
   resetIdleTimeout();
   onAnimationFrame();
+
+  for(var i = 0; i < visualizerChoices.length; i++){
+    var container = document.createElement('div');
+    container.className = "vis-thumbnail";
+    container.innerHTML = visualizerChoices[i].name;
+    container.style.left = (i * visualizerItemWidth) + "px";
+    document.getElementById('visualizer-options').appendChild(container);
+  }
+  $('.vis-thumbnail').removeClass('selected');
+  $('.vis-thumbnail:eq(' + selectedVisualizer + ')').addClass('selected');
 });
 
 function appSocketOnConnect() {
@@ -89,9 +131,10 @@ function appSocketOnConnect() {
 
 
 function appSocketOnPeg(data) {
-  if(currentState == STATE_IDLE) {
+  if((currentState == STATE_IDLE) || (currentState == STATE_POST_DROP)) {
     startDrop();
   }
+
   if(currentState == STATE_DROP) {
     // TODO: Filter pegs to avoid false hits! (MOXY FRUVOUS)
     var pegIndex = parseInt(data.pegId, 10);
@@ -104,10 +147,18 @@ function appSocketOnPeg(data) {
 
 function startDrop() {
 
-  if(visualizers[currentVisualizer].isAttract){
+  $('#canvas').removeClass('background');
+
+
+  var selected = visualizerChoices[selectedVisualizer].id;
+
+  if(selected == "_random") {
     currentVisualizer = getRandomVisualizer();
-    renderer.setVisualizer(currentVisualizer);
+  } else {
+    currentVisualizer = selected;
   }
+  renderer.setVisualizer(currentVisualizer);   
+  
 
   fakePeg = 0;
   ellapsedCaptureTime = 0;
@@ -115,7 +166,7 @@ function startDrop() {
   setState(STATE_DROP);
 
   dropData = {
-    id: puckId,
+    id: lastPuckId,
     visualizer: currentVisualizer,
     time: new Date().getTime(),
     pegs: []
@@ -135,6 +186,13 @@ function getRandomVisualizer() {
   return choices[Math.floor(Math.random() * choices.length)];
 }
 
+function startVisualizerTimeout() {
+  $('#next-visualizer').addClass('show');
+  window.clearTimeout(hideVisualizerSelectionTimeout);
+  hideVisualizerSelectionTimeout = window.setTimeout(function() {
+    $('#next-visualizer').removeClass('show');
+  }, 3000);
+}
 
 function appKeyDown(e) {
 
@@ -143,59 +201,100 @@ function appKeyDown(e) {
     var newVisualizer = currentVisualizer;
 
     switch(e.keyCode) {
-      case 49: // '1'
+      case 37: // Left Arrow
       {
-        newVisualizer = 'particles';
+        selectedVisualizer--;
+        if(selectedVisualizer < 0){
+          selectedVisualizer = 0;
+        }
+        startVisualizerTimeout();
       }
       break;
       
-      case 50: // '2'
+      case 39: // Right Arrow
       {
-        newVisualizer = 'voronoi';
+        selectedVisualizer++;
+        if(selectedVisualizer >= visualizerChoices.length) {
+          selectedVisualizer = visualizerChoices.length - 1;
+        }
+        startVisualizerTimeout();
       }
       break;
-      
-      case 51: // '3'
+
+      case 38: // UP arrow.
       {
-        newVisualizer = 'ribbons';
+         
       }
       break;
     }
 
-    if(currentVisualizer != newVisualizer) {
-      
-      // TODO: It would probably be better to handle this differently.
-      // If a new state is chosen in teh post-drop state, go to idle
-      // so the timeout won't re-set the vis..
-      if(currentState == STATE_POST_DROP){
-        setState(STATE_IDLE);
-      }
-
-      renderer.setVisualizer(newVisualizer);
-      currentVisualizer = newVisualizer;
-    }
+    $('.vis-thumbnail').removeClass('selected');
+    $('.vis-thumbnail:eq(' + selectedVisualizer + ')').addClass('selected');
   }
 
-  if(currentState == STATE_POST_DROP) {
+  if((currentState == STATE_POST_DROP) || (currentState == STATE_IDLE)) {
+
+    var character = String.fromCharCode(e.keyCode);
+    var validCharacters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_'.split('');
+    
+    //console.log("Character: " + character + ", code:" + e.keyCode);
+
     switch(e.keyCode) {
       case 13: // 'enter' key
-        console.log("Tweet something..");
+        if(twitterName.length > 0){
+          $.post('/tweet-run/', {
+            'id':puckId,
+            'user':twitterName
+          }, function(data){
+            twitterName = '';
+            updateTwitterName();
+          });
+        }
       break;
-
-      case 49: // '1' key
-        e.preventDefault = true;
+      
+      case 8: // backspace
+        if(twitterName.length > 0){
+          twitterName = twitterName.substring(0, twitterName.length-1);
+        }
+        e.preventDefault();
         e.stopPropagation();
       break;
+
+      case 189: // HACK, catch dashes and turn them into underscores.
+        character = '_';
+        // continue on to the default case.
+
+      default:
+        if((twitterName.length < 15) && (validCharacters.indexOf(character) != -1)) {
+          twitterName += character;
+        }
+      break;
     }
+    
+    updateTwitterName();
     resetIdleTimeout();
+  
   }
 
-  if(e.keyCode == 65) { // 'a' key
-    appSocketOnPeg({'pegId' : fakePeg});
-    fakePeg += Math.floor(Math.random() * 4) + 5;
-    if(fakePeg >= 87){
-      fakePeg = 81 + Math.floor(Math.random() * 6);
+ // if(current_state == STATE_DROP) { 
+    if(e.keyCode == 38) { // 'a' key
+      appSocketOnPeg({'pegId' : fakePeg});
+      fakePeg += Math.floor(Math.random() * 4) + 5;
+      
+      if(fakePeg >= 85){
+        fakePeg = 81 + Math.floor(Math.random() * 5);
+      }
     }
+ // }
+}
+
+
+function updateTwitterName() {
+  document.getElementById("twitter-name").innerHTML = twitterName;
+  if(twitterName != ""){
+    $("#placeholder").hide();
+  } else {
+    $("#placeholder").show();
   }
 }
 
@@ -205,16 +304,33 @@ function resetIdleTimeout() {
 }
 
 
-function setState(newState){
+function setState(newState) {
   resetIdleTimeout();
   lastStateChangeTime = new Date().getTime();
   currentState = newState;
-  $("#status DIV").hide();
+  $(".status-panel").hide();
   $("#status-" + newState).show();
+
+  if(currentState == STATE_UPLOADING){
+    $("#upload-progress").css('width', "1%");
+  }
+
+  if(currentState == STATE_IDLE) {
+    if(lastPuckId != null){
+      $('#replay-id').html(lastPuckId);
+      $('#canvas').addClass('background');
+      $('#twitter').show();
+    } else {
+      $('#twitter').hide();
+    }
+  } else {
+    
+    $('#canvas').removeClass('background');
+  }
 }
 
 
-function setAttractMode(){
+function setAttractMode() {
   renderer.setVisualizer('attract-mode');
   currentVisualizer = 'attract-mode';
 }
@@ -253,6 +369,7 @@ function onAnimationFrame() {
     var vals = [];
     
     vals.push("State: " + currentState);
+    vals.push("lastPuckId: " + lastPuckId);
     vals.push("PuckId: " + puckId);
     vals.push("Visualizer: " + currentVisualizer);
 
@@ -273,22 +390,33 @@ function onAnimationFrame() {
   }
 
 
+  updateVisualizerSelector();
+
   window.requestAnimationFrame(onAnimationFrame);
+}
+
+function updateVisualizerSelector(){
+  var targetX = selectedVisualizer * visualizerItemWidth - 400 + 80;
+  visualizerOffsetX += (targetX - visualizerOffsetX) * 0.05;
+  document.getElementById('visualizer-options').style.left = -visualizerOffsetX + "px";
 }
 
 
 function onCaptureComplete() {
-  setState(STATE_UPLOADING);
   uploadImageIndex = 0;
+  setState(STATE_UPLOADING);
   uploadDrop();
 }
 
+
 function uploadDrop() {
+  if (DEBUG) console.log('calling save-run', new Date().getTime());
   $.post('/save-run', {
       'id': puckId,
       'data': JSON.stringify(dropData)
     }, 
     function(data) {
+      if (DEBUG) console.log('save-run responded, uploading images.', new Date().getTime());
       uploadImages();
     }
   );
@@ -321,7 +449,7 @@ function onUploadComplete() {
   $.get('/next-id', function(id) {
     lastPuckId = puckId;
     puckId = id;
-    setState(STATE_POST_DROP);
+    setState(STATE_IDLE);
   });
 }
 
@@ -346,6 +474,8 @@ function uploadImages() {
 
   if (DEBUG) console.log('uploading image ', uploadImageIndex);
   
+  $("#upload-progress").css('width', (uploadImageIndex / capturedFrames.length * 100) + "%")
+
   $.post('/upload/', {
       'width': uploadCanvas.width,
       'height': uploadCanvas.height,

@@ -89,6 +89,9 @@ function Board() {
   }
 
   this.getPinCoordinates = function(index) {
+    if(!this.pegs[index]){
+      console.log("ERROR: getPinCoordinates called for invalid pin index: " + index);
+    }
     return {
       x: this.pegs[index].x,
       y: this.pegs[index].y

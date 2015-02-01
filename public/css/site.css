@@ -36,3 +36,140 @@ table tr .progress {
 table tr .true {
   background: rgba(0, 255, 0, 0.5);
 }
+
+#status {
+  width:800px; 
+  height:1000px; 
+  z-index:20000; 
+  color:#a0a0a0; 
+  overflow:hidden;
+  /*background:rgba(0,0,0,0.9);*/
+}
+
+canvas{
+}
+
+canvas.background {
+  opacity:0.35;
+  -webkit-filter: blur(15px) grayscale(40%);
+}
+
+#status-uploading{
+  font-size:50px;
+}
+
+#upload-progress{
+  background:rgba(255,255,255,0.75 );
+  height:20px;
+}
+
+#twitter{
+  padding:20px;
+  top:700px;
+  width:100%;
+  position:absolute;
+  background:rgba(64,64,64,0.25);
+}
+
+#twitter-preview{
+  background:white;
+  width:150px;
+  height:330px;
+  float:right;
+}
+
+#replay-url {
+  font-size:40px;
+  color:#909090;
+  margin-bottom:40px;
+}
+
+#replay-id {
+  color:white;
+}
+
+#twitter-title {
+  margin-bottom:10px;
+  color:white;
+  font-size:30px;
+  color:#909090;
+ /* border-bottom:3px solid #909090;*/
+}
+
+#placeholder {
+  color:#808080;
+}
+
+#twitter-input {
+  color:white;
+  font-size:40px;
+}
+
+#continue-message {
+  font-size:30px;
+  text-align:center;
+  color:white;
+  width:100%;
+}
+
+
+#next-visualizer {
+  padding:20px;
+  color:#909090;
+  position:absolute;
+  top:100px;
+  font-size:30px;
+  width:100%;
+  height:320px;
+
+  background:rgba(64, 64, 64, 0.25); 
+
+  -webkit-transition: 0.5s ease-in-out;
+  -moz-transition: 0.5s ease-in-out;
+  -o-transition: 0.5s ease-in-out;
+  transition: 0.5s ease-in-out;
+
+  opacity:0;
+}
+
+#next-visualizer.show {
+  opacity:1;
+}
+
+
+#visualizer-label{
+  /*border-bottom:3px solid #909090;*/
+}
+
+#visualizer-options {
+  position:absolute;
+
+}
+
+
+#visualizer-options div {
+  display:inline-block;
+  width:160px;
+  height:160px;
+  position:absolute;
+  top:30px;
+  font-size:30px;
+  text-align:center;
+  background:rgba(100, 100, 100, 0.45);
+
+  -webkit-transition: 0.2s ease-in-out;
+  -moz-transition: 0.2s ease-in-out;
+  -o-transition: 0.2s ease-in-out;
+  transition: 0.2s ease-in-out;
+  
+  transform: translate(0, 80px) scale(0.75);
+}
+
+#visualizer-options div.selected {
+  -webkit-transform: translate(0, 0px) scale(1.0);
+  -moz-transform:    translate(0, 0px) scale(1.0);
+  -o-transform:      translate(0, 0px) scale(1.0);
+  -ms-transform:     translate(0, 0px) scale(1.0);
+  transform:         translate(0, 0px) scale(1.0);
+  background:rgba(100,100,100,0.85);
+}

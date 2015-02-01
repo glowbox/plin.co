@@ -54,4 +54,15 @@ article, aside, details, figcaption, figure, footer, header, hgroup, menu, nav, 
   display: block;
 }
 
+#twitter-name{
+  color:white;
+}
+
 /* styles for miles... */
+
+.vis-thumbnail {
+    display:inline-block;
+    width:30px;
+    height:30px;
+  }
+}
