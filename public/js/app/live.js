@@ -37,7 +37,7 @@ var STATE_POST_DROP = 'post-drop';
 var lastStateChangeTime = 0;
 var currentState = 'INVALID';
 
-var DEBUG = true;
+var DEBUG = false;
 var fakePeg = 0; // used to spoof pegs via key press
 
 var visualizerChoices = [
