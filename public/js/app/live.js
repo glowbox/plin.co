@@ -50,8 +50,16 @@ var visualizerChoices = [
     id:"particles"
   },
   {
+    name: "Strum",
+    id:"strum"
+  },
+  {
     name: "Random",
     id:"_random"
+  },
+  {
+    name: "Cradle",
+    id:"catsCradle"
   },
   {
     name: "Cardinal",
@@ -108,7 +116,7 @@ $(function() {
   for(var i = 0; i < visualizerChoices.length; i++){
     var container = document.createElement('div');
     container.className = "vis-thumbnail";
-    container.innerHTML = visualizerChoices[i].name;
+    container.innerHTML = visualizerChoices[i].name + '<img style="width:160px; height:160px;" src="/img/' + visualizerChoices[i].id + '_s.gif" />';
     container.style.left = (i * visualizerItemWidth) + "px";
     document.getElementById('visualizer-options').appendChild(container);
   }

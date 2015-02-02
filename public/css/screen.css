@@ -66,3 +66,8 @@ article, aside, details, figcaption, figure, footer, header, hgroup, menu, nav, 
     height:30px;
   }
 }
+
+.vis-thumbnail img {
+  width: 160px;
+  height: 160px;
+}
