@@ -122,6 +122,10 @@ $(function() {
   }
   $('.vis-thumbnail').removeClass('selected');
   $('.vis-thumbnail:eq(' + selectedVisualizer + ')').addClass('selected');
+
+  if(!DEBUG){
+    $('#debug').remove();
+  }
 });
 
 function appSocketOnConnect() {
