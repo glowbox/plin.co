@@ -408,7 +408,10 @@ function onAnimationFrame() {
 }
 
 function updateVisualizerSelector(){
-  var targetX = selectedVisualizer * visualizerItemWidth - 400 + 80;
+
+  var centerOffset = 314 - (visualizerItemWidth / 2); // 314 is half the status element width (628px)
+  
+  var targetX = selectedVisualizer * visualizerItemWidth - centerOffset;
   visualizerOffsetX += (targetX - visualizerOffsetX) * 0.05;
   document.getElementById('visualizer-options').style.left = -visualizerOffsetX + "px";
 }
