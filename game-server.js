@@ -11,25 +11,19 @@ var sys = require('sys');
 var bodyParser = require('body-parser');
 var knox = require('knox');
 var request = require('request');
-var PNG = require('png-js');
-var GIFEncoder = require('gifencoder');
 var redis = require('redis');
+
+var childProcess = require("child_process");
 
 var TMP_GIF_PATH = __dirname + '/tmp/';
 
 var dbClient;
 var knoxClient;
-var encoder = null;
 
 var serialData = [];
 var pegMap = {};
 
 var uploadFrameQueue = [];
-var encoderQueue = [];
-
-// Start checking the GIF encoder queue, this function starts a loop that will
-// persist as long as the server is running.
-checkEncoderQueue();
 
 
 /*
@@ -215,6 +209,7 @@ app.post('/save-run', function(req, res) {
 
   // create empty array for tweets..
   data['twitter'] = [];
+  data['encoded'] = false;
 
   // Add the drop
   dbClient.set(dropId, JSON.stringify(data), redis.print);
@@ -260,128 +255,56 @@ app.post('/upload', function(req, res) {
   var pngData = pngData.replace(/^data:image\/\w+;base64,/, "");
   var buffer = new Buffer(pngData, 'base64');
   
+  // Store this frame in the current queue of images.
+  // Note: If there was ever more than one board connected to the 
+  //       server, this could cause problems because the uploadFrameQueue
+  //       doesn't keep track of the dropID, this system assumes only one
+  //       client at a time.
+  uploadFrameQueue.push(buffer);
+  debug('Added frame to queue.');
 
-  var png = new PNG(buffer);
+  if(req.body.frame >= req.body.frameCount - 1){
+    var encoderItem = {};
 
-  png.decode(function(pixelData) {
-  
-    // Store this frame in the current queue of images.
-    // Note: If there was ever more than one board connected to the 
-    //       server, this could cause problems because the uploadFrameQueue
-    //       doesn't keep track of the dropID, this system assumes only one
-    //       client at a time.
-    uploadFrameQueue.push(pixelData);
+    encoderItem.frameCount  = req.body.frameCount;
+    encoderItem.id          = req.body.id;
+    encoderItem.fps         = req.body.fps;
+    encoderItem.width       = req.body.width;
+    encoderItem.height      = req.body.height;
+    encoderItem.frames      = uploadFrameQueue;
+    encoderItem.fileName    = TMP_GIF_PATH + req.body.id + '.gif';
 
+    // Spawn a child process to encode the gif.
+    var proc = childProcess.fork("./gif-encoder.js");
+    proc.on("message", function(message) {
+      if(message.event == "complete"){
+        encoderFinished(message.puckId);
+      }
+    });
+    proc.send(encoderItem);
     
-    
-    if(req.body.frame >= req.body.frameCount - 1){
-      var encoderItem = {};
+    uploadFrameQueue = [];
+  }
 
-      encoderItem.frameCount  = req.body.frameCount;
-      encoderItem.id          = req.body.id;
-      encoderItem.fps         = req.body.fps;
-      encoderItem.width       = req.body.width;
-      encoderItem.height      = req.body.height;
-      encoderItem.frames      = uploadFrameQueue;
-
-      encoderQueue.push(encoderItem);
-    }
-
-    debug('Added frame to queue.');
-    res.send('Added Frame to queue!'); 
-  });
-
+  res.send('Added Frame to queue!'); 
 });
-
-
-/*
- * Start encoding the contents of the encoder queue.
- */
-function startEncoding() {
-
-  if(encoderQueue.length <= 0){
-    debug("startEncoding() - Nothing to encode..");
-    return;
-  }
-
-  var puckId  = encoderQueue[0].id;
-  var width   = encoderQueue[0].width;
-  var height  = encoderQueue[0].height;
-  var fps     = encoderQueue[0].fps;
-
-  var outputFile = TMP_GIF_PATH + puckId + '.gif';
-  
-  encoder = new GIFEncoder(width, height);
-  encoder.createReadStream().pipe(fs.createWriteStream(outputFile));
-  encoder.start();
-  
-  debug("Starting new GIF encoder for id: " + puckId + ", " + outputFile);
-
-  encoder.setRepeat(0);   // 0 for repeat, -1 for no-repeat
-  encoder.setDelay(1000 / fps);  // frame delay in ms
-  encoder.setQuality(10);
-
-  encodeFrame();
-}
-
-
-/*
- * Encode one frame from the encoder queue.
- */
-function encodeFrame() {
-  
-  var puckId = encoderQueue[0].id;
-  var pixelData = encoderQueue[0].frames.splice(0,1)[0];
-  var frameCount = encoderQueue[0].frameCount;
-  var framesRemaining = encoderQueue[0].frames.length;
-  
-  debug("Encoding GIF frame: " + (frameCount - framesRemaining) + " of " + frameCount);
-  
-  encoder.addFrame(pixelData);
-  
-  if(framesRemaining <= 0){
-    
-    encoder.finish();
-    encoder = null;
-   
-    // get rid of the 0-th item in the queue
-    encoderQueue.splice(0, 1);
- 
-    
-    setTimeout(function(){
-      encoderFinished(puckId);
-    }, 10);
-
-    debug("Finished encoding GIF for id: " + puckId);
-
-    // start watchign the queue again.
-    checkEncoderQueue();
-  } else {
-    // keep going..
-    encodeFrame();
-  }
-}
-
 
 /*
  * Called when a GIF is done being encoded for a drop.
  */
 function encoderFinished(puckId){
+
+  dbClient.get(puckId, function (e, r) {
+    if (r) {
+      var runData = JSON.parse(r);
+      runData.encoded = true;
+      dbClient.set(puckId, JSON.stringify(runData), redis.print);
+    }
+  });
+
+
   saveGIF(puckId);
   postAllTweetsForDrop(puckId);
-}
-
-
-/*
- * Check the encoder queue and start encoding if it's not empty.
- */
-function checkEncoderQueue() {
-  if((encoderQueue.length > 0) && (encoder == null)) {
-    startEncoding();
-  } else {
-    // do nothing, check again in a bit.
-    setTimeout(checkEncoderQueue, 500);
-  }
 }
 
 
@@ -393,14 +316,15 @@ function saveGIF(id) {
  
   debug("About to upload to S3: " + (TMP_GIF_PATH + gifName));
   
-  while(fs.statSync(TMP_GIF_PATH + gifName)["size"] <= 0){
-    console.log("waitin...");
+  var stats = fs.statSync(TMP_GIF_PATH + gifName);
+  if(stats['size'] == 0){
+    debug("ERROR: Gif is zero bytes! file: " + TMP_GIF_PATH + gifName);
+    return;
   }
-  //var stats = fs.statSync(TMP_GIF_PATH + gifName);
- // debug("File size: " + stats['size']);
  
   knoxClient.putFile(TMP_GIF_PATH + gifName, gifName, function(err, res){
     debug('File uploaded to S3: ' + gifName);
+
     if (config.POST_TWEET) {
       postTweet(id, null);
     } 
@@ -441,6 +365,10 @@ function addTweetToDrop(dropId, userName) {
       if(runData.twitter.indexOf(userName.toLowerCase()) == -1) {
         runData.twitter.push(userName.toLowerCase());
         dbClient.set(dropId, JSON.stringify(runData), redis.print);
+
+        if(runData.encoded) {
+          postTweet(dropId, userName);
+        }
       } else {
         debug("User is already in the twitter list.");
       }
@@ -448,21 +376,6 @@ function addTweetToDrop(dropId, userName) {
       debug("Unable to add tweet to drop: " + dropId + ", drop not found.");
     }
   });
-
-  // Check the encoderQueue to see if this drop 
-  // is currently being encoded.
-  var encoding = false;
-  for(var i = 0; i < encoderQueue.length; i++){
-    if(encoderQueue[i].id == dropId){
-      encoding = true;
-      break;
-    } 
-  }
-  
-  // Only tweet if the drop is done encoding.
-  if(!encoding) {
-    postTweet(dropId, userName);
-  }
 }
 
 

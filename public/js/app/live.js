@@ -21,12 +21,12 @@ var dropData = {
 
 var twitterName = '';
 
-var lastPuckId = null;
+var lastPuckId = 'fef';
 
 var currentVisualizer = 'attract-mode';
 var renderer;
 
-var IDLE_TIMEOUT_INTERVAL = 30 * 1000;
+var IDLE_TIMEOUT_INTERVAL = 20 * 1000;
 var idleTimeout = 0;
 
 var STATE_IDLE = 'idle';
@@ -37,7 +37,7 @@ var STATE_POST_DROP = 'post-drop';
 var lastStateChangeTime = 0;
 var currentState = 'INVALID';
 
-var DEBUG = true;
+var DEBUG = false;
 var fakePeg = 0; // used to spoof pegs via key press
 
 var visualizerChoices = [
@@ -122,6 +122,10 @@ $(function() {
   }
   $('.vis-thumbnail').removeClass('selected');
   $('.vis-thumbnail:eq(' + selectedVisualizer + ')').addClass('selected');
+
+  if(!DEBUG){
+    $('#debug').remove();
+  }
 });
 
 function appSocketOnConnect() {
@@ -328,7 +332,9 @@ function setState(newState) {
       $('#replay-id').html(lastPuckId);
       $('#canvas').addClass('background');
       $('#twitter').show();
+      lastPuckId = null;
     } else {
+      $('#canvas').removeClass('background');
       $('#twitter').hide();
     }
   } else {
@@ -404,7 +410,10 @@ function onAnimationFrame() {
 }
 
 function updateVisualizerSelector(){
-  var targetX = selectedVisualizer * visualizerItemWidth - 400 + 80;
+
+  var centerOffset = 314 - (visualizerItemWidth / 2); // 314 is half the status element width (628px)
+  
+  var targetX = selectedVisualizer * visualizerItemWidth - centerOffset;
   visualizerOffsetX += (targetX - visualizerOffsetX) * 0.05;
   document.getElementById('visualizer-options').style.left = -visualizerOffsetX + "px";
 }
