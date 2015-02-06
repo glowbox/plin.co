@@ -21,12 +21,12 @@ var dropData = {
 
 var twitterName = '';
 
-var lastPuckId = null;
+var lastPuckId = 'fef';
 
 var currentVisualizer = 'attract-mode';
 var renderer;
 
-var IDLE_TIMEOUT_INTERVAL = 30 * 1000;
+var IDLE_TIMEOUT_INTERVAL = 20 * 1000;
 var idleTimeout = 0;
 
 var STATE_IDLE = 'idle';
@@ -332,7 +332,9 @@ function setState(newState) {
       $('#replay-id').html(lastPuckId);
       $('#canvas').addClass('background');
       $('#twitter').show();
+      lastPuckId = null;
     } else {
+      $('#canvas').removeClass('background');
       $('#twitter').hide();
     }
   } else {
