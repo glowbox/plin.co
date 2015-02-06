@@ -49,12 +49,6 @@ if (process.env.REDISCLOUD_URL) {
       queue = JSON.parse(r).queue;
     }
   });
-
-  client.get('recent', function (e, r) {
-    if (r) {
-      recent = JSON.parse(r).recent;
-    }
-  });
 }
 
 
@@ -79,7 +73,17 @@ function isCallerMobile(req) {
 }
 
 app.get('/', function(req, res){
-  return res.render('home.mustache', {'js': 'home', 'recent': recent});
+  client.get('allIds', function (e, r) {
+    if (r) {
+      var data = JSON.parse(r);
+      var last = data.last;
+      console.log(last);
+      var ids = data.ids;
+      var lastIndex = ids.indexOf(last);
+      var recent = ids.slice(lastIndex - 4, lastIndex + 1);
+      return res.render('home.mustache', {'js': 'home', 'recent': recent.reverse()});
+    }
+  });
 });
 
 app.get(/^\/([a-z]{3})$/, function(req, res) {
