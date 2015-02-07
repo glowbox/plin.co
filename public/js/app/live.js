@@ -21,7 +21,7 @@ var dropData = {
 
 var twitterName = '';
 
-var lastPuckId = 'fef';
+var lastPuckId = null;
 
 var currentVisualizer = 'attract-mode';
 var renderer;
@@ -294,7 +294,7 @@ function appKeyDown(e) {
       fakePeg += Math.floor(Math.random() * 4) + 5;
       
       if(fakePeg >= 85){
-        fakePeg = 81 + Math.floor(Math.random() * 5);
+        fakePeg = 80 + Math.floor(Math.random() * 5);
       }
     }
  // }
@@ -320,26 +320,32 @@ function setState(newState) {
   resetIdleTimeout();
   lastStateChangeTime = new Date().getTime();
   currentState = newState;
+  
   $(".status-panel").hide();
   $("#status-" + newState).show();
 
   if(currentState == STATE_UPLOADING){
     $("#upload-progress").css('width', "1%");
+    twitterName = '';
+    updateTwitterName();
   }
 
   if(currentState == STATE_IDLE) {
-    if(lastPuckId != null){
+    
+    if(lastPuckId != null) {
       $('#replay-id').html(lastPuckId);
       $('#canvas').addClass('background');
       $('#twitter').show();
+
+      // make lastPuckId null so the next time the idle timeout fires it will
+      // hide the twitter and replay UI.
       lastPuckId = null;
     } else {
       $('#canvas').removeClass('background');
       $('#twitter').hide();
     }
   } else {
-    
-    $('#canvas').removeClass('background');
+    //$('#canvas').removeClass('background');
   }
 }
 
@@ -421,6 +427,7 @@ function updateVisualizerSelector(){
 
 function onCaptureComplete() {
   uploadImageIndex = 0;
+  $("#canvas").addClass("background");
   setState(STATE_UPLOADING);
   uploadDrop();
 }

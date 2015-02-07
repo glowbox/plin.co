@@ -8,6 +8,7 @@ function CatsCradle(board, puckID) {
   this.radius;
   this.colorValues;
   this.points;
+  this.maxPoints = 20;
   
   this.init = function() {
     var scheme = new ColorScheme;
@@ -31,7 +32,7 @@ function CatsCradle(board, puckID) {
     this.context.lineWidth = .1;
     
     for (var i = 0; i < this.points.length; i++) {
-      this.points[i].tick += .01 * this.points[i].speed;
+      this.points[i].tick += (deltaTime * 0.0005) * this.points[i].speed;
     }
 
     for (var i = 0; i < this.points.length; i++) {
@@ -40,6 +41,12 @@ function CatsCradle(board, puckID) {
   }
 
   this.hit = function(pegIndex) {
+    
+    // enforce maximum for performance reasons.
+    if(this.points.length >= this.maxPoints) {
+      return;
+    }
+
     var coor = this.board.getPinCoordinates(pegIndex);
     
     this.points.push({
@@ -50,30 +57,27 @@ function CatsCradle(board, puckID) {
       radius: 1 + Math.random() * 2,
       colors: []}
     )
-    for (var i = 0; i < 15; i++) {
+    for (var i = 0; i < 100; i++) {
       this.points[this.points.length - 1].colors.push('#' + this.colorValues[Math.floor(Math.random() * this.colorValues.length)]);
     }
-    console.log(this.points);
+   // console.log(this.points);
   }
 
   this.drawLines = function(num, point) {
-    // context.strokeStyle=this.points[num].color;
-    // context.beginPath();
-    // context.arc(this.points[num].x,this.points[num].y,this.points[num].radius,0,2*Math.PI);
-    // context.stroke();
-    // context.closePath();
-    for (var i = 0; i < this.points.length; i++) {
+    
+    for (var i = num; i < this.points.length; i++) {
       if (i !== num) {
-        // this.context.strokeStyle = this.points[i].color;
-        this.context.strokeStyle = this.points[num].colors[i];
         this.context.beginPath();
+        this.context.strokeStyle = this.points[num].colors[i % 15];
         this.context.moveTo(Math.sin(this.points[i].tick) * this.points[i].radius + this.points[i].x, Math.cos(this.points[i].tick) * this.points[i].radius + this.points[i].y)
         this.context.lineTo(
           Math.sin(this.points[num].tick) * this.points[num].radius + this.points[num].x, Math.cos(this.points[num].tick) * this.points[num].radius + this.points[num].y)
         this.context.closePath();
         this.context.stroke();
       }
+
     }
+    
   }
 
   this.init();

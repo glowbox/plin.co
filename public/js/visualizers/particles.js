@@ -113,6 +113,8 @@ function ParticleEsplode(board, puckID) {
   var self = this;
   this.board = board;
   this.puckID = puckID;
+  this.particleCount = 0;
+  this.maxParticles = 50;
 
   this.name = "particles";
 
@@ -330,42 +332,47 @@ if(this.useDefaultRenderer) {
   this.addObsticles();
 
   this.addParticles = function(x, y) {
-    for(var i = 0; i < 3; i++){
-      var colorIndex = Math.floor(Math.random() * this.colors.length);
-      if(Math.random() > 0.5){
-        var r = Math.random() * 0.75 + 0.5;
-        this.addBody('circle', {
-          x: x + ((Math.random() > 0.5) ? 0.25 : -0.25),
-          y: y - (r * 2) - 0.2,
-          vy: -Math.random() * 0.05,
-          vx: Math.random() * 0.1 - 0.05,
-          radius: r,
-          mass: 1,
-          styles: {
-              fillStyle: "#" + this.colors[colorIndex],
-              angleIndicator: 'none'
-          },
-          restitution: 0.3
-        });
-      } else {
-        var bh = Math.random() * 2 + 0.25;
-        var bw = Math.random() * 2 + 0.25;
-        this.addBody('rectangle', {
-          x: x + ((Math.random() > 0.5) ? 0.25 : -0.25),
-          y: y - bh - 0.15,
-          vy: -Math.random() * 0.05,
-          vx: Math.random() * 0.1 - 0.05,
-          width: bw,
-          height: bh,
-          mass: 1,
-          styles: {
-              fillStyle: "#" + this.colors[colorIndex],
-              angleIndicator: 'none'
-          },
-          restitution: 0.3
-        });
+    var amount = Math.floor(Math.random() * 3) + 1;
+    for(var i = 0; i < amount; i++) {
+      this.particleCount++;
+      if(this.particleCount < this.maxParticles) {
+        var colorIndex = Math.floor(Math.random() * this.colors.length);
+        if(Math.random() > 0.5){
+          var r = Math.random() * 0.75 + 0.5;
+          this.addBody('circle', {
+            x: x + ((Math.random() > 0.5) ? 0.25 : -0.25),
+            y: y - (r * 2) - 0.2,
+            vy: -Math.random() * 0.05,
+            vx: Math.random() * 0.1 - 0.05,
+            radius: r,
+            mass: 1,
+            styles: {
+                fillStyle: "#" + this.colors[colorIndex],
+                angleIndicator: 'none'
+            },
+            restitution: 0.3
+          });
+        } else {
+          var bh = Math.random() * 2 + 0.25;
+          var bw = Math.random() * 2 + 0.25;
+          this.addBody('rectangle', {
+            x: x + ((Math.random() > 0.5) ? 0.25 : -0.25),
+            y: y - bh - 0.15,
+            vy: -Math.random() * 0.05,
+            vx: Math.random() * 0.1 - 0.05,
+            width: bw,
+            height: bh,
+            mass: 1,
+            styles: {
+                fillStyle: "#" + this.colors[colorIndex],
+                angleIndicator: 'none'
+            },
+            restitution: 0.3
+          });
+        }
       }
     }
+    console.log(this.particleCount);
   }
 
   this.hit = function(index) {
